@@ -1,0 +1,292 @@
+---
+- name: K8s cluster creation
+  hosts: k8s_node_init
+  tasks:
+    # apt update and apt upgrade
+    - name: Update apt packages
+      apt:
+        update_cache: yes
+      become: true
+
+    - name: Stop unattended-upgrades service
+      systemd:
+        name: unattended-upgrades
+        state: stopped
+      become: true
+
+    - name: Upgrade apt packages
+      apt:
+        upgrade: dist
+        autoremove: yes
+      become: true
+
+    - name: Start unattended-upgrades service
+      systemd:
+        name: unattended-upgrades
+        state: started
+      become: true
+
+    # Install python3
+    - name: Install Python3, pip3, wget, and python3-venv
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - wget
+        state: present
+      become: true
+
+    # Install unzip 
+    - name: Install unzip
+      apt:
+        name: unzip
+        state: present
+      become: true
+
+    # Install terraform 
+    - name: Install Terraform v0.14.10
+      get_url:
+        url: http://packages.dalecosta.com/repo/dale-k8s-packages/cli/terraform/terraform_linux_amd64_v0-14-10.zip	
+        dest: /tmp/terraform_linux_amd64_v0-14-10.zip	
+      become: true
+
+    - name: Extract Terraform
+      unarchive:
+        src: /tmp/terraform_linux_amd64_v0-14-10.zip	
+        dest: /usr/local/bin
+        remote_src: yes
+      become: true
+
+    # Install pipx 
+    - name: Install pipx
+      apt:
+        name: pipx
+        state: present
+      become: true
+
+    # Install ansible
+    - name: Install Ansible
+      apt:
+        name: ansible
+        state: present
+      become: true
+
+    - name: Install Ansible-Core
+      apt:
+        name: ansible-core
+        state: present
+      become: true
+              
+    # Install helm
+    - name: Install helm v3.11.0
+      unarchive:
+        src: http://packages.dalecosta.com/repo/dale-k8s-packages/cli/helm/helm_linux_amd64_v3-11-0.tar.gz
+        dest: /usr/local/bin
+        extra_opts: "--strip-components=1"
+        owner: root
+        group: root
+        mode: 0755
+        remote_src: true
+      args:
+        creates: /usr/local/bin/helm
+      become: true
+
+    # Install jq 
+    - name: Install jq
+      apt:
+        name: jq
+        state: present
+      become: true
+
+    # Install yq 
+    - name: Install yq
+      get_url:
+        url: http://packages.dalecosta.com/repo/dale-k8s-packages/cli/yq/yq_linux_amd64_v4-35-2
+        dest: /usr/local/bin/yq
+        mode: '0755'
+      become: true
+
+    # Install storj v1.89.5
+    - name: Install Storj CLI (uplink) v1.89.5
+      get_url:
+        url: http://packages.dalecosta.com/repo/dale-k8s-packages/cli/uplink/uplink_linux_amd64_v1-89-5.zip
+        dest: /tmp/storj-cli.zip
+      become: true
+
+    - name: Extract Storj CLI (uplink) v1.89.5
+      unarchive:
+        src: /tmp/storj-cli.zip
+        dest: /usr/local/bin
+        remote_src: yes
+        mode: '0755'
+      become: true
+
+    # Install grep
+    - name: Install grep
+      apt:
+        name:
+          - grep
+        state: present
+      become: true
+
+    # Install curl and others tools
+    - name: Install curl and others tools required
+      apt:
+        name:
+          - curl
+          - apt-transport-https
+        state: present
+      become: true
+
+    # Install net-tools
+    - name: Install net-tools
+      apt:
+        name:
+          - net-tools
+        state: present
+      become: true
+   
+    # Install git
+    - name: Install git
+      apt:
+        name:
+          - git
+        state: present
+      become: true
+
+   # Install snap
+    - name: Install Snapd
+      apt:
+        name: snapd
+        state: present
+      become: true
+      become_user: root
+
+    - name: Start the Snapd service
+      systemd:
+        name: snapd
+        state: started
+      become: true
+      become_user: root
+
+    # Install go
+    - name: Install Go using Snap
+      command: snap install go --classic
+      become: true
+      become_user: root
+
+    # Outuput of all tools installed
+    - name: Output tool versions
+      command: "{{ item }}"
+      loop:
+        - 'python3 --version'
+        - 'pip3 --version'
+        - 'terraform --version'
+        - 'pipx --version'
+        - 'ansible --version'
+        - 'helm version'
+        - 'jq --version'
+        - 'yq --version'
+        - 'uplink -h'
+        - 'grep --version'
+        - 'netstat -h'
+        - 'git --version'
+        - 'go version'
+        - 'snap --version'
+      loop_control:
+        loop_var: item
+      changed_when: false
+
+    # Copy scripts
+    - name: Copy the init_node.sh script
+      copy:
+        src: "{{ local_path_git }}/ansible/k8s_cluster_creation/playbooks/scripts/init_node.sh"
+        dest: "{{ ansible_env.PWD }}/init_node.sh"
+        mode: '0755'
+
+    - name: Copy the setup_node.sh script
+      copy:
+        src: "{{ local_path_git }}/ansible/k8s_cluster_creation/playbooks/scripts/setup_node.sh"
+        dest: "{{ ansible_env.PWD }}/setup_node.sh"
+        mode: '0755'
+
+    # Copy manifests
+    - name: Copy the Calico tigera_operator.yml (v3.26.1)
+      copy:
+        src: "{{ local_path_git }}/ansible/k8s_cluster_creation/playbooks/manifests/calico/v3_26_1/tigera_operator.yml"
+        dest: "{{ ansible_env.PWD }}/tigera_operator.yml"
+        mode: '0755'
+
+    - name: Copy the Calico custom_resources.yml (v3.26.1)
+      copy:
+        src: "{{ local_path_git }}/ansible/k8s_cluster_creation/playbooks/manifests/calico/v3_26_1/custom_resources.yml"
+        dest: "{{ ansible_env.PWD }}/custom_resources.yml"
+        mode: '0755'
+
+    # Create .kube folder
+    - name: Create folder '.kube' on home directory
+      file:
+        path: "{{ ansible_env.PWD }}/.kube"
+        state: directory
+        mode: '0755'
+
+    # Initialize node of the cluster
+    - name: Cluster node initialization
+      shell: "bash -c '. {{ ansible_env.PWD }}/init_node.sh \"{{ k8s_version }}\" \"{{ cri_os }}\" \"{{ cri_version }}\" \"{{ required_ports }}\" \"{{ open_ports_for_master_or_worker }}\" \"{{ cluster_env }}\" \"{{ json_hostnames }}\"'"
+      become: true
+      environment:
+        ansible_shell_executable: /bin/bash
+
+    # Setup worker or master node
+    - name: Cluster node setup
+      shell: "bash -c '. {{ ansible_env.PWD }}/setup_node.sh \"{{ node_type }}\" \"{{ node_name }}\" \"{{ cluster_name }}\" \"{{ storj_bucket }}\" \"{{ storj_secret }}\" \"{{ node_ip }}\" \"{{ pod_cidr }}\" \"{{ ansible_env.PWD }}\"'"
+      become: true
+      environment:
+        ansible_shell_executable: /bin/bash
+
+    # Make available kubectl also for user, without using sudo
+    - name: Get the user's UID
+      command: id -u
+      register: user_uid
+      changed_when: false
+
+    - name: Get the user's GID
+      command: id -g
+      register: user_gid
+      changed_when: false
+
+    - name: Change ownership of .kube/config
+      file:
+        path: "{{ ansible_env.PWD }}/.kube/config"
+        owner: "{{ user_uid.stdout }}"
+        group: "{{ user_gid.stdout }}"
+        state: file
+      become: true
+
+    # Delete scripts and yml  after the execution
+    - name: Delete the init_node.sh script
+      file:
+        path: "{{ ansible_env.PWD }}/init_node.sh"
+        state: absent
+      become: true
+
+    - name: Delete the setup_node.sh script
+      file:
+        path: "{{ ansible_env.PWD }}/setup_node.sh"
+        state: absent
+      become: true
+
+    - name: Delete the tigera_operator.yml file
+      file:
+        path: "{{ ansible_env.PWD }}/tigera_operator.yml"
+        state: absent
+      become: true
+      become_user: root
+
+    - name: Delete the custom_resources.yml file
+      file:
+        path: "{{ ansible_env.PWD }}/custom_resources.yml"
+        state: absent
+      become: true
+      become_user: root

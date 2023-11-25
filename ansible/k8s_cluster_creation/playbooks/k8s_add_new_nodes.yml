@@ -1,0 +1,22 @@
+---
+- name: Add new hosts to /etc/hosts
+  hosts: k8s_node_init
+  tasks:
+    - name: Preprocess YAML string format
+      shell: |
+        echo "{{ new_json_hostnames }}" | sed 's/\\\\/\\/g'
+      register: processed_output
+      become: yes
+      become_user: root
+
+    - name: Parse YAML string format processed 
+      set_fact:
+        hostnames_data: "{{ processed_output.stdout | from_json }}"
+      become: yes
+      become_user: root
+    
+    - name: Add hosts to /etc/hosts
+      shell: "echo '[IFORMATION] Adding host: {{ item.ip }} - {{ item.hostname }}' && echo '{{ item.ip }} {{ item.hostname }}' | sudo tee -a /etc/hosts"
+      loop: "{{ hostnames_data.hostnames }}"
+      become: yes
+      become_user: root

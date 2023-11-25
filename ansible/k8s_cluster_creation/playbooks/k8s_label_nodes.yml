@@ -1,0 +1,42 @@
+---
+- name: K8s label nodes (only on master node)
+  hosts: k8s_node_init
+  become: true
+  # Used only if the user wants put manually 
+  # the value before the execution of the playbook.
+  # In this case we pass the value from extra-var arg on start_ansible.sh
+  # vars_prompt:
+  #   - name: nodes_to_join_on_master 
+  #     prompt: "Enter a value for my_var"
+  #     private: no  # Set to yes if you want to hide the input
+  tasks:
+    # Label worker nodes
+    - name: Label worker nodes
+      shell: "kubectl label node {{ item | replace('\"', '') }} node-role.kubernetes.io/worker=worker"
+      with_items: "{{ workers_nodes }}"
+      when: workers_nodes | length > 0
+    
+    # Label master nodes if there are
+    - name: Label master nodes
+      shell: "kubectl label node {{ item | replace('\"', '') }} node-role.kubernetes.io/master=master"
+      with_items: "{{ master_nodes }}"
+      when: "master_nodes | length > 0 and item != 'NO_MASTER'"
+
+    # Copy metrics
+    - name: Copy the k8s_metrics.yml
+      copy:
+        src: "{{ local_path_git }}/ansible/k8s_cluster_creation/playbooks/manifests/metrics/k8s_metrics.yml"
+        dest: "{{ ansible_env.PWD }}/k8s_metrics.yml"
+        mode: '0755'
+    
+    # Apply metrics
+    - name: Apply k8s_metrics.yml
+      shell: "kubectl apply -f {{ ansible_env.PWD }}/k8s_metrics.yml"
+
+    # Delete metrics file 
+    - name: Delete the k8s_metrics.yml file
+      file:
+        path: "{{ ansible_env.PWD }}/k8s_metrics.yml"
+        state: absent
+      become: true
+      become_user: root
