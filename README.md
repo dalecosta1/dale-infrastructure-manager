@@ -68,8 +68,8 @@ to get the manifests to start the creation of the k8s cluster.
 
 We need to configure and signin on storj to automate the process of the cluster creation when the worker nodes read from storj the '.kubeconfig' file to join to the master node and to the cluster (storj uplink CLI is installed during the execution of the 'setup.sh').
 For this reason you need to signin here https://eu1.storj.io/login (EU) or https://us1.storj.io/login (US), create an account and save all the secrets keys required.
-See storj: https://www.storj.io/ 
-See docs uplink cli: https://docs.storj.io/dcs/api/uplink-cli
+See storj: https://www.storj.io/.
+See docs uplink cli: https://docs.storj.io/dcs/api/uplink-cli.
 
 Required keys to save:
 
