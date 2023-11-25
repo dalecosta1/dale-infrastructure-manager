@@ -35,7 +35,7 @@ if is_macos; then
     else
         echo "[ERROR] Unknown architecture on macOS installing yq: $architecture"
         exit 1
-    fi 
+    fi
 fi
 
 
@@ -114,7 +114,7 @@ if ! command -v "unzip" >/dev/null 2>&1; then
 fi
 
 # yq
-if ! command_exists yq; then
+if ! command -v "yq" >/dev/null 2>&1; then
     echo "[INFORMATION] Installing yq..."  
     if is_macos; then
         # macOS.. For binaries we need to understand the architecture
@@ -136,7 +136,7 @@ if ! command_exists yq; then
 fi
 
 # Python3
-if ! command_exists python3; then
+if ! command -v "python3" >/dev/null 2>&1; then
     echo "[INFORMATION] Installing Python3..."
     if is_macos; then
         # macOS
@@ -150,7 +150,7 @@ if ! command_exists python3; then
 fi
 
 # Install pipx for ansible if not installed
-if ! command_exists pipx; then
+if ! command -v "pipx" >/dev/null 2>&1; then
     echo "[INFORMATION] Installing pipx..."
     if is_macos; then
         # macOS
@@ -164,8 +164,8 @@ if ! command_exists pipx; then
 fi
 
 # Install ansible & ansible-core
-if ! command_exists ansible; then
-    echo "Installing Ansible..."
+if ! command -v "ansible" >/dev/null 2>&1; then
+    echo "[INFORMATION] Installing Ansible..."
     if is_macos; then
         # macOS
         brew install ansible
@@ -180,9 +180,8 @@ if ! command_exists ansible; then
 fi
 
 # Nodejs
-echo "Installing Nodejs..."
-if ! command_exists node; then
-    echo "Installing Nodejs..."
+if ! command -v "node" >/dev/null 2>&1; then
+    echo "[INFORMATION] Installing Nodejs..."
     if is_macos; then
         # macOS
         brew install node
@@ -196,8 +195,8 @@ if ! command_exists node; then
 fi
 
 # Npm
-if ! command_exists npm; then
-    echo "Installing Npm..."
+if ! command -v "npm" >/dev/null 2>&1; then
+    echo "[INFORMATION] Installing Npm..."
     if is_macos; then
         # macOS
         brew install npm
@@ -210,7 +209,6 @@ if ! command_exists npm; then
 fi
 
 # Storj
-echo "Installing Storj..."
 if ! command -v "uplink" >/dev/null 2>&1; then
     echo "[INFORMATION] Installing Storj CLI..."
     if is_macos; then
@@ -228,7 +226,7 @@ if ! command -v "uplink" >/dev/null 2>&1; then
 fi
 
 # Kubectl
-if ! command_exists kubectl; then
+if ! command -v "kubectl" >/dev/null 2>&1; then
     echo "Installing Kubectl..."
     if is_macos; then
         # macOS
@@ -255,7 +253,7 @@ fi
 echo "[INFORMATION] Making the script start_ansible.sh executable..."
 
 # Chmod on scripts
-sudo chmod +x "$PWD/ansible/scripts/start_ansible.sh"
+sudo chmod +x "$PWD/scripts/k8s_cluster_creation/start_ansible.sh"
 
 # Print message
 echo "[INFORMATION] Initializing UI with 'npm i'..."

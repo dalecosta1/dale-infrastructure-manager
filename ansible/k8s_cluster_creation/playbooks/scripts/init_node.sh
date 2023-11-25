@@ -17,34 +17,10 @@ set -euxo pipefail
 ############################################
 
 # Check if all seven arguments are provided
-if [ "$#" -ne 7 ]; then
-    echo "Usage: $0 <KUBERNETES_VERSION> <CRI_OS> <CRI_VERSION> <REQUIRED_PORTS> <OPEN_PORTS_FOR_MASTER_OR_WORKER> <ENV> <JSON_HOSTNAMES>"
-    echo "Example: ./init_node.sh \"1.28.1-00\" \"xUbuntu_22.04\" \"1.28\" \"true\" \"all\" \"dev\" \"{ hostnames: [ { \"hostname\": \"master-1\", \"ip\": \"192.168.1.56\" }, { \"hostname\": \"worker-2\", \"ip\": \"192.168.1.57\" } ] }\""
+if [ "$#" -ne 8 ]; then
+    echo "Usage: $0 <KUBERNETES_VERSION> <CRI_OS> <CRI_VERSION> <REQUIRED_PORTS> <OPEN_PORTS_FOR_MASTER_OR_WORKER> <ENV> <IP> <JSON_HOSTNAMES>"
+    echo "Example: ./init_node.sh \"1.28.1-00\" \"xUbuntu_22.04\" \"1.28\" \"true\" \"all\" \"dev\" \"192.168.1.56\" \"{ hostnames: [ { \"hostname\": \"master-1\", \"ip\": \"192.168.1.56\" }, { \"hostname\": \"worker-2\", \"ip\": \"192.168.1.57\" } ] }\""
     exit 1
-fi
-
-# Install awk if not installed
-if ! command -v "awk" >/dev/null 2>&1; then
-    echo "[INFORMATION] Installing awk..."
-    sudo apt-get install -y gawk
-    echo "[INFORMATION] Awk version: $(awk --version)"
-    echo "[INFORMATION] Awk installed."
-fi
-
-# Install sed if not installed
-if ! command -v "sed" >/dev/null 2>&1; then
-    echo "[INFORMATION] Installing sed..."
-    sudo apt-get install -y sed
-    echo "[INFORMATION] Sed version: $(sed --version)"
-    echo "[INFORMATION] Sed installed."
-fi
-
-# Install jq if not installed
-if ! command -v "jq" >/dev/null 2>&1; then
-    echo "[INFORMATION] Installing jq..."
-    sudo apt-get install -y jq
-    echo "[INFORMATION] Jq version: $(jq --version)"
-    echo "[INFORMATION] Jq installed."
 fi
 
 
@@ -63,19 +39,20 @@ echo "[INFORMATION] Start initialization..."
 # REQUIRED_PORTS="true"
 # OPEN_PORTS_FOR_MASTER_OR_WORKER="master"
 # CLUSTER_ENV="prod"
-# JSON_HOSTNAMES="{ \"hostnames\": [ { \"hostname\": \"master-1\", \"ip\": \"192.168.1.56\" }, { \"hostname\": \"worker-2\", \"ip\": \"192.168.1.57\" } ] }"
 # LOCAL_IP="$(ip -4 route get 8.8.8.8 | head -1 | awk '{print $7}')" # Get the local IP address
+# JSON_HOSTNAMES="{ \"hostnames\": [ { \"hostname\": \"master-1\", \"ip\": \"192.168.1.56\" }, { \"hostname\": \"worker-2\", \"ip\": \"192.168.1.57\" } ] }"
 KUBERNETES_VERSION="$1" # k8s version
 CRI_OS="$2" # cri os
 CRI_VERSION="$3" # cri version
 REQUIRED_PORTS="$4" # This variable check if is required open ports
 OPEN_PORTS_FOR_MASTER_OR_WORKER="$5" # Method of which ports open
 CLUSTER_ENV="$6"
-JSON_HOSTNAMES="$7"
-LOCAL_IP="$(ip -4 route get 8.8.8.8 | head -1 | awk '{print $7}')" # Get the local IP address
+LOCAL_IP="$7"
+JSON_HOSTNAMES="$8"
 
 # No args variables
 REPO_PACKAGES_URL="http://packages.dalecosta.com/repo/dale-k8s-packages" # Repository of the packages to install
+k8s_v="" # Used to set and get GPG key for k8s
 
 # Print message OK
 echo "[INFORMATION] Initialization completed!"
@@ -235,6 +212,8 @@ sudo apt-get update -y
 # Install CRI-O Runtime              #
 ######################################
 
+# ref: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+
 # Print message
 echo "[INFORMATION] Start to install cri-o (CRI runtime)..."
 
@@ -315,18 +294,34 @@ echo "[INFORMATION] CRI runtime installed susccessfully"
 # Install kubelet, kubectl and Kubeadm #
 ########################################
 
+# ref: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+
+# print msg
 echo "[INFORMATION] Starting to install kubelet, kubectl and Kubeadm..."
 
-# - Update the package list to get the latest package information
-# - Install necessary packages for working with Kubernetes
-# - Create keyring folder if there isn't
-# - Extract version of k8s
-# - Set the GPG key for Kubernetes and store it in 
-#   "/usr/share/keyrings/kubernetes-archive-keyring.gpg"
+# Update the package list to get the latest package information and
+# install necessary packages for working with Kubernetes
 sudo apt-get update -y
 sudo apt-get install -y apt-transport-https ca-certificates curl || true
+
+# Create keyring folder if there isn't
 sudo mkdir -p -m 755 /etc/apt/keyrings
-k8s_v=$(echo "$KUBERNETES_VERSION" | grep -oP '\d+\.\d+')
+
+# Print msg k8s version
+echo "[INFORMATION] K8s version to install: $KUBERNETES_VERSION"
+
+# Get only the firsts two numbers from k8s version
+case $KUBERNETES_VERSION in
+    "1.28.2-00" | "1.28.4-1.1")
+        k8s_v="1.28"
+        ;;
+    *)
+        echo "[ERROR] Unsupported Kubernetes version: $KUBERNETES_VERSION"
+        exit 1
+        ;;
+esac
+
+# Get and set GPG key
 if [ "$KUBERNETES_VERSION" == "1.28.2-00" ]; then
     sudo curl -k -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg "$REPO_PACKAGES_URL/apt/google/key/apt_key.gpg"
 else
@@ -365,7 +360,7 @@ EOF"
 kubelet_v=$(sudo kubelet --version)
 kubeadm_v=$(sudo kubeadm version)
 kubectl_v=$(sudo kubectl version --client)
-echo -e "[INFORMATION] kubelet version:\n$kubelet_v"
-echo -e "[INFORMATION] kubeadm version:\n$kubeadm_v"
-echo -e "[INFORMATION] kubectl version:\n$kubectl_v"
+echo -e "[INFORMATION] $kubelet_v (kubelet)"
+echo -e "[INFORMATION] $kubeadm_v"
+echo -e "[INFORMATION] $kubectl_v (kubectl)"
 echo "[INFORMATION] kubelet, kubeadm and kubectl installed susccessfully!"

@@ -51,7 +51,7 @@
         dest: /tmp/terraform_linux_amd64_v0-14-10.zip	
       become: true
 
-    - name: Extract Terraform
+    - name: Extract Terraform in bin /usr/local/bin
       unarchive:
         src: /tmp/terraform_linux_amd64_v0-14-10.zip	
         dest: /usr/local/bin
@@ -90,6 +90,20 @@
         remote_src: true
       args:
         creates: /usr/local/bin/helm
+      become: true
+    
+    # Install sed
+    - name: Install sed
+      apt:
+        name: sed
+        state: present
+      become: true
+
+    # Install awk
+    - name: Install awk
+      apt:
+        name: gawk
+        state: present
       become: true
 
     # Install jq 
@@ -233,12 +247,12 @@
 
     # Initialize node of the cluster
     - name: Cluster node initialization
-      shell: "bash -c '. {{ ansible_env.PWD }}/init_node.sh \"{{ k8s_version }}\" \"{{ cri_os }}\" \"{{ cri_version }}\" \"{{ required_ports }}\" \"{{ open_ports_for_master_or_worker }}\" \"{{ cluster_env }}\" \"{{ json_hostnames }}\"'"
+      shell: "bash -c '. {{ ansible_env.PWD }}/init_node.sh \"{{ k8s_version }}\" \"{{ cri_os }}\" \"{{ cri_version }}\" \"{{ required_ports }}\" \"{{ open_ports_for_master_or_worker }}\" \"{{ cluster_env }}\" \"{{ node_ip }}\" \"{{ json_hostnames }}\"'"
       become: true
       environment:
         ansible_shell_executable: /bin/bash
 
-    # Setup worker or master node
+    # Setup node of the cluster (worker or master)
     - name: Cluster node setup
       shell: "bash -c '. {{ ansible_env.PWD }}/setup_node.sh \"{{ node_type }}\" \"{{ node_name }}\" \"{{ cluster_name }}\" \"{{ storj_bucket }}\" \"{{ storj_secret }}\" \"{{ node_ip }}\" \"{{ pod_cidr }}\" \"{{ ansible_env.PWD }}\"'"
       become: true

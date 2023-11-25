@@ -19,10 +19,12 @@
 .env.test.local
 .env.production.local
 
+# npm & yarn
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Internal file
 ansible/k8s_cluster_creation/inventory/group_vars
 ansible/k8s_cluster_creation/inventory/group_vars/*
 scripts/k8s_installations
@@ -34,3 +36,101 @@ ui/build
 ui/coverage
 ui/.pnp
 ui/.pnp.js
+
+# Logs
+*.log
+
+# Xcode
+*.xcworkspace
+*.xcuserstate
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+
+# CocoaPods
+Pods/
+Podfile.lock
+*.xcconfig
+
+# Carthage
+Carthage/Checkouts
+Carthage/Build
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager
+.build/
+Packages/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# IntelliJ
+.idea/
+
+# VSCode
+.vscode/
+
+# Xcode
+*.swp
+*~.nib
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.xcworkspace/
+!default.xcworkspace
+xcuserdata/
+
+# User-specific files
+*.suo
+*.user
+*.userosscmd
+*.sln.docstates
+
+# Mono Auto Generated Files
+mono_crash.*
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# VS Code directories
+.vscode/
+.idea/
+
+# macOS Finder files to ignore
+.AppleDouble
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# iOS
+# build/
+*.ipa
+*.dSYM
+
+# CocoaPods
+Pods/

@@ -4,6 +4,19 @@
 In-house k8s cluster creation using the dale-infrastructure-manager which is a versatile tool leverages Ansible for automation. With the UI you can generate the manifests and the json to run the ansible playbooks via bash script, creating a k8s cluster with kubeadm. There is also the possibility to add new nodes on cluster.
 
 
+## 🪅 Compatibility
+
+This project can be executed on the following platforms:
+
+- Windows (using Ubuntu via WSL)
+- MacOS (arm + amd)
+- Ubuntu
+
+Cluster node OS availables:
+
+- Ubuntu Server 22.04
+
+kkube
 ## 🤹‍♂️ Tech Stack
 
 **UI:** react-ts
@@ -13,18 +26,32 @@ In-house k8s cluster creation using the dale-infrastructure-manager which is a v
 
 ## 🎰 Installation
 
+Check if there are the folder '.kube' on home user profile directory. If there isn't, create it:
+
+```bash
+  cd $HOME
+  mkdir .kube
+```
+
+Check the folder 'config' inside '.kube'. If there isn't, create it:
+
+```bash
+  cd $HOME
+  mkdir .kube/config
+```
+
 Now go inside the folder where you want clone the project
-(advice: clone the repo on folders like workespace or source):
+(advice: clone the repo on folders such as 'workspace' or 'source' under user profile):
 
 ```bash
   git clone https://github.com/dalecosta1/dale-infrastructure-manager.git
   cd dale-infrastructure-manager
 ```
 
-When inside the repo, we need to make executable the setup.sh:
+When inside the repo, we need to make executable the 'setup.sh':
 
 ```bash
-  chmod +x setup.sh
+  sudo chmod +x setup.sh
 ```
 
 Now it is possible start the setup:
@@ -39,10 +66,10 @@ to get the manifests to start the creation of the k8s cluster.
 
 ## 🪣 Storj bucket configuration
 
-We need to configure and signin on storj to automate the process of the cluster creation
-when the worker nodes read from storj the.kubeconfig to join to the master node. For this
-reason you need to signin here https://eu1.storj.io/login, create an account and saving all the
-secrets keys. 
+We need to configure and signin on storj to automate the process of the cluster creation when the worker nodes read from storj the '.kubeconfig' file to join to the master node and to the cluster (storj uplink CLI is installed during the execution of the 'setup.sh').
+For this reason you need to signin here https://eu1.storj.io/login (EU) or https://us1.storj.io/login (US), create an account and save all the secrets keys required.
+See storj: https://www.storj.io/ 
+See docs uplink cli: https://docs.storj.io/dcs/api/uplink-cli
 
 Required keys to save:
 
@@ -50,9 +77,9 @@ Required keys to save:
 - Api key
 - Passphase
 
-Once you have register, you need to create an api key to access to the bucket. After that,
-is possible generate the export to put on the manifests. To generate the export just only open
-your terminal executing this (storj uplink CLI is installed during the execution of the 'setup.sh'):
+Once you have registered, you need to create an api key to access to the bucket. After that,
+is possible generate the export to put on the manifests or UI. To generate the export just only open
+your terminal executing this:
 
 ```bash
 uplink setup
@@ -67,27 +94,13 @@ uplink setup
 #Would you like S3 backwards-compatible Gateway credentials? (y/N): n
 ```
 
-After the initialization of the storj bucket do the export to insert inside the json and manifests:
+After the initialization of the storj bucket do the export to insert inside the json and manifests or on UI:
 
 ```bash
 uplink access export main export_storj.txt
 ```
 
-Inside the file .txt will be the export to insert inside the UI or inside json and manifests.
-
-
-## 🪅 Compatibility
-
-This project can be executed on the following platforms:
-
-- Windows (using Ubuntu via WSL)
-- MacOS (arm + amd)
-- Ubuntu
-
-
-the OS support for the cluster nodes:
-
-- Ubuntu Server 22.04
+Inside the file .txt will be the export.
 
 
 ## 🖥 UI
@@ -98,7 +111,7 @@ To generate the manifests and the YAML files, to run the bash script, is possibl
   cd ui
 ```
 
-If not installed, install npm packages (operation done running setup.sh):
+If not installed, install npm packages (operation done during the 'setup.sh' execution):
 
 ```bash
   sudo npm i
@@ -108,7 +121,7 @@ If not installed, install npm packages (operation done running setup.sh):
 Start UI:
 
 ```bash
-  npm run start
+  sudo npm run start
 ```
 
 Compile the for 'Cluster creation' to generate the manifests.
@@ -119,15 +132,25 @@ Compile the for 'Cluster creation' to generate the manifests.
 Before to start, understand that ansible work with '_', so all files inside ansible are with '_' use this nomenclature please. Once you got the manifests, put the YAML inside inside a new folder under ansible/k8s_cluster_creation/inventory/group_vars. The folder it is preferible that it is called as the name of the cluster eg: cluster_dev --> So put YAML into ansible/k8s_cluster_creation/inventory/group_vars/cluster_dev.
 
 After this, put the json file inside the folder scripts/k8s_cluster_creation/json.
-Now, go on root folder of the git project downloaded:
+So create the folder json and add the json file downlaoded from UI, eg: scripts/k8s_cluster_creation/json/cluster_dev.json
+Now, go on root folder of the git project:
 
+- MacOS:
 ```bash
   sudo -s
   cd dale-infrastructure-manager
+  # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
   ./scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
 ```
 
-Start the script start_ansible.sh passing by arg. the name of the file json with the nodes configurations to create the cluster. The script will start the execution of the procedure. 
+- Ubuntu:
+```bash
+  cd dale-infrastructure-manager
+  # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
+  ./scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
+```
+
+Start the script 'start_ansible.sh' passing by arg. the name of the file json with the nodes configurations to create the cluster. The script will start the execution of the procedure. 
 
 
 ## 🚀 BE - Add new nodes
@@ -137,7 +160,7 @@ new entity in the array of the json 'add_new_nodes':
 
 ```json
   {
-    ...
+    ...others properties...
     "nodes_to_add": [
       {
         "node_type": "worker",
@@ -171,9 +194,18 @@ new entity in the array of the json 'add_new_nodes':
 
 Now is possible run again the script:
 
+- MacOS:
 ```bash
   sudo -s
   cd dale-infrastructure-manager
+  # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
+  ./scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
+```
+
+- Ubuntu:
+```bash
+  cd dale-infrastructure-manager
+  # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
   ./scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
 ```
 

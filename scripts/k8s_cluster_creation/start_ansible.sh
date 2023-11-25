@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 
 # Check if the filename is given
 if [ "$#" -ne 1 ]; then
-    echo -e "${RED}[ERROR] No arguments provided, see the example:${NC} . scripts/k8s_cluster_creation/start_ansible.sh cluster-dev.json"
+    echo -e "${RED}[ERROR] No arguments provided, see the example:${NC} ./scripts/k8s_cluster_creation/start_ansible.sh cluster-dev.json"
     exit 1
 fi
 
@@ -34,52 +34,13 @@ if [ ! -f "$NODES_JSON_PATH" ]; then
     exit 1
 fi
 
-# Install jq if not installed
-if ! command -v "jq" >/dev/null 2>&1; then
-    echo "[INFORMATION] Installing jq..."
-    if is_macos; then
-        # Install using Homebrew on macOS
-        brew install jq
-    else
-        # Install using apt on Ubuntu
-        sudo apt-get install -y jq
-    fi
-    echo "[INFORMATION] jq version: $(jq --version)"
-fi
+# Set $HOME and %PWD before become root
+HOME_DIR="$HOME"
+PWD_DIR="$PWD"
 
-# Install wget if not installed
-if ! command -v "wget" >/dev/null 2>&1; then
-    echo "[INFORMATION] Installing wget..."
-    if is_macos; then
-        # Install using Homebrew on macOS
-        brew install wget
-    else
-        # Install using apt on Ubuntu
-        sudo apt-get install -y wget
-    fi
-    echo "[INFORMATION] wget version: $(wget --version)"
-fi
-
-# Install yq if not installed
-if ! command -v "yq" >/dev/null 2>&1; then
-    echo "[INFORMATION] Installing yq..."
-    sudo wget --no-check-certificate -qO /usr/local/bin/yq http://packages.dalecosta.com/repo/dale-k8s-packages/cli/yq/yq_linux_amd64_v4-35-2
-    sudo chmod a+x /usr/local/bin/yq
-    echo "[INFORMATION] yq version: $(yq --version)"
-fi
-
-# Check if uplink is installed.
-# if not, install it...
-if ! command -v "uplink" >/dev/null 2>&1; then
-    echo "[INFORMATION] Installing Storj CLI..."
-    curl -L -k http://packages.dalecosta.com/repo/dale-k8s-packages/cli/uplink/uplink_linux_amd64_v1-89-5.zip -o storj-cli.zip
-    unzip storj-cli.zip
-    sudo chmod +x uplink
-    sudo mv uplink /usr/local/bin/
-    sudo rm storj-cli.zip
-    echo "[INFORMATION] Storj CLI uplink installed successfully!"
-fi
-
+# Become root
+sudo echo "[INFRMATION] HOME user directory path: '$HOME_DIR'"
+sudo echo "[INFRMATION] PWD user directory path: '$PWD_DIR'"
 
 ##############################################################
 # CHECK IF IT IS A CLUSTER INSTALLATION OR ADDING A NEW NODE #
@@ -112,7 +73,7 @@ if [ -n "$nodes_to_add" ]; then
     hostnames_ips=() # Create an array to store hostnames and IPs, new nodes
     hostnames_prev_nodes=() # Declaring the array for prev. nodes 
     path_template_yml=$(echo $json_data | jq -c '.path_vars_file_master_node_ansible') # Template to create new YAML for al lthe new nodes
-    path_template_yml="$PWD/$path_template_yml"
+    path_template_yml="$PWD_DIR/$path_template_yml"
 
     # Read new nodes to add
     while IFS= read -r node; do
@@ -149,7 +110,7 @@ if [ -n "$nodes_to_add" ]; then
         echo "[INFORMATION] Adding new nodes hosts to the node: $hostname - $ip - $hostname"
 
         # Get the path of the file yaml of the node
-        complete_path_yaml="$PWD/$file_path"
+        complete_path_yaml="$PWD_DIR/$file_path"
         echo "[INFORMATION] Path of the file to add new nodes: $complete_path_yaml"
 
         # Update YAML
@@ -157,7 +118,7 @@ if [ -n "$nodes_to_add" ]; then
         sed -i "s/^new_json_hostnames: .*/new_json_hostnames: \"$modified_string\"/" "$complete_path_yaml"
         
         # Start the playbook to add new nodes on /etc/hosts
-        ansible-playbook -i "$PWD/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD/ansible/k8s_cluster_creation/playbooks/k8s_add_new_nodes.yml" -e "@$PWD/$path_vars_ansible_file" --extra-vars "ansible_become_pass=$ssh_user_password" -v
+        ansible-playbook -i "$PWD_DIR/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD_DIR/ansible/k8s_cluster_creation/playbooks/k8s_add_new_nodes.yml" -e "@$PWD_DIR/$path_vars_ansible_file" --extra-vars "ansible_become_pass=$ssh_user_password" -v
 
         # Capture the exit status of the ansible-playbook command.
         # '$?' is a special variable that holds the exit status of the last executed command. 
@@ -200,7 +161,7 @@ if [ -n "$nodes_to_add" ]; then
 
         # Get the path of the file yaml of the node
         file_path=$(echo "$file_path" | sed 's:/*$::') # Remove trailing slashes from file_path
-        complete_path_yaml="$PWD/$file_path" # Combine with the file path
+        complete_path_yaml="$PWD_DIR/$file_path" # Combine with the file path
         echo "[INFORMATION] Updating node: $hostname"
         echo "[INFORMATION] Updating YAML file: $complete_path_yaml"
         
@@ -237,14 +198,14 @@ if [ -n "$nodes_to_add" ]; then
         hostname=$(echo "$node" | jq -r '.hostname')
         ip=$(echo "$node" | jq -r '.ip')
         physical_env=$(echo "$node" | jq -r '.physical_env')
-        complete_file_path="$PWD/$file_path"
+        complete_file_path="$PWD_DIR/$file_path"
 
         # Print message
         echo "[INFORMATION] Creating YAML for the new node: $hostname"
 
         # Create the new node YAML in the cluster folder
         path_template_node_yml=$(echo $json_data | jq -c '.path_vars_file_master_node_ansible') # Template to create new YAML for al lthe new nodes
-        path_template_node_yml="$PWD/${path_template_node_yml//\"}"
+        path_template_node_yml="$PWD_DIR/${path_template_node_yml//\"}"
         
         # Print path file
         echo "[INFORMATION] Path template: $path_template_node_yml"
@@ -327,7 +288,7 @@ fi
 #########################################
 
 # Print message
-echo "[INFORMATION] Starting to create and configure the nodes of the cluster..."
+echo "[INFORMATION] K8s cluster creation/updates started! Creating and configuring the nodes of the cluster..."
 
 # Extracting values
 path_vars_master_node=$(echo $json_data | jq -r '.path_vars_file_master_node_ansible')
@@ -365,7 +326,7 @@ while IFS= read -r node; do
     echo "[INFORMATION] Running playbook for the node: $hostname"
     
     # Run the ansible playbook and capture the exit status
-    ansible-playbook -i "$PWD/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD/ansible/k8s_cluster_creation/playbooks/k8s_cluster_creation.yml" -e "@$PWD/$path_vars_ansible_file" --extra-vars "ansible_become_pass=$ssh_user_password" -v
+    ansible-playbook -i "$PWD_DIR/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD_DIR/ansible/k8s_cluster_creation/playbooks/k8s_cluster_creation.yml" -e "@$PWD_DIR/$path_vars_ansible_file" --extra-vars "ansible_become_pass=$ssh_user_password" -v
 
     # Capture the exit status of the ansible-playbook command.
     playbook_exit_status=$?
@@ -437,7 +398,7 @@ echo "[INFORMATION] Worker nodes: '$workers_nodes_str'"
 echo "[INFORMATION] Master nodes: '$master_node_str'"
 
 # Start ansible playbook
-ansible-playbook -i "$PWD/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD/ansible/k8s_cluster_creation/playbooks/k8s_label_nodes.yml" -e "@$PWD/$path_vars_master_node" --extra-vars "ansible_become_pass=$ssh_user_password_master_node workers_nodes=$workers_nodes_str master_nodes=$master_node_str" -v
+ansible-playbook -i "$PWD_DIR/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD_DIR/ansible/k8s_cluster_creation/playbooks/k8s_label_nodes.yml" -e "@$PWD_DIR/$path_vars_master_node" --extra-vars "ansible_become_pass=$ssh_user_password_master_node workers_nodes=$workers_nodes_str master_nodes=$master_node_str" -v
 
 playbook_label_exit_status=$?
 
@@ -501,24 +462,37 @@ if [ "$KUBECONFIG_SETUP" == "true" ]; then
         # If KUBECONFIG is empty or unset, set it to the new kubeconfig path
         kubeconfig_string="$kubeconfig_path"
     fi
-
-    # Update the .bashrc  
-    if grep -q "^KUBECONFIG=" ~/.bashrc; then
-        # If "KUBECONFIG" is already in .bashrc, append the new value
-        sudo sed -i "s|^KUBECONFIG=.*|KUBECONFIG=\"$kubeconfig_string\"|" ~/.bashrc
+    
+    # Check if macos because the
+    # .bashrc on mac is .zshrc
+    file_bash_mac_or_ubuntu=""
+    if is_macos; then
+        # macOS
+        file_bash_mac_or_ubuntu="$HOME_DIR/.zshrc"
+        echo "[INFORMATION] file bash profile path set for macos: '$file_bash_mac_or_ubuntu'"
     else
-        # If "KUBECONFIG" is not in .bashrc, add it
-        echo "KUBECONFIG=\"$kubeconfig_string\"" | sudo tee -a ~/.bashrc
+        # Ubuntu
+        file_bash_mac_or_ubuntu="$HOME_DIR/.bashrc"
+        echo "[INFORMATION] file bash profile path set for ubuntu: '$file_bash_mac_or_ubuntu'"
+    fi
+
+    # Update the .bashrc or .zshrc
+    if grep -q "^KUBECONFIG=" "$file_bash_mac_or_ubuntu"; then
+        # If "KUBECONFIG" is already in .bashrc or .zshrc, append the new value
+        sudo sed -i "s|^KUBECONFIG=.*|KUBECONFIG=\"$kubeconfig_string\"|" "$file_bash_mac_or_ubuntu"
+    else
+        # If "KUBECONFIG" is not in .zshrc or .bashrc, add it
+        echo "KUBECONFIG=\"$kubeconfig_string\"" | sudo tee -a "$file_bash_mac_or_ubuntu"
     fi
 
     # Check if there is also 'export KUBECONFIG'
-    # on .bashrc, if not add it
-    if ! grep -q "export KUBECONFIG" ~/.bashrc; then
-        echo "export KUBECONFIG" >> ~/.bashrc
+    # on .bashrc or .zshrc, if not add it
+    if ! grep -q "export KUBECONFIG" "$file_bash_mac_or_ubuntu"; then
+        echo "export KUBECONFIG" >> "$file_bash_mac_or_ubuntu"
     fi
 
     # Make the variable KUBECONFIG available as OS variable
-    source ~/.bashrc
+    source "$file_bash_mac_or_ubuntu"
 
     # Print message value updated
     echo "[INFORMATION] OS KUBECONFIG VARIABLE UPDATED: $KUBECONFIG"
@@ -527,5 +501,6 @@ if [ "$KUBECONFIG_SETUP" == "true" ]; then
     sudo rm -rf export.txt
 
     # Print message operation completed
+    echo "[INFORMATION] If 'kubectl get nodes' does not return the number of nodes on the cluster, maybe you need to run 'export KUBECONFIG' manually. Open the terminal and copy-past this: 'export KUBECONFIG=\"$kubeconfig_string\"'"
     echo -e "${GREEN}[INFORMATION] Kubeconfig configured correctly on the local machine:${NC} $kubeconfig_path"
 fi
