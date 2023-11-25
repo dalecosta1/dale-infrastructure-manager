@@ -16,7 +16,7 @@ Cluster node OS availables:
 
 - Ubuntu Server 22.04
 
-kkube
+
 ## 🤹‍♂️ Tech Stack
 
 **UI:** react-ts
