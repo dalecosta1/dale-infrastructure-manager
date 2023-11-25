@@ -129,10 +129,18 @@ Compile the for 'Cluster creation' to generate the manifests.
 
 ## 🚀 BE - Create new cluster
 
-Before to start, understand that ansible work with '_', so all files inside ansible are with '_' use this nomenclature please. Once you got the manifests, put the YAML inside inside a new folder under ansible/k8s_cluster_creation/inventory/group_vars. The folder it is preferible that it is called as the name of the cluster eg: cluster_dev --> So put YAML into ansible/k8s_cluster_creation/inventory/group_vars/cluster_dev.
+Before to start, understand that ansible work with underscore, so all files inside the folders 'ansible' and 'scripts' are with underscore. Use this nomenclature please. Once you got the manifests, put the YAML inside inside a new folder under ansible/k8s_cluster_creation/inventory/group_vars. The folder it is preferible that it is called as the name of the cluster eg: cluster_dev --> So put YAML into ansible/k8s_cluster_creation/inventory/group_vars/cluster_dev.
+
+Make sure 'start_ansible.sh' is executable (done by the script setup.sh):
+
+- MacOS:
+```bash
+  cd dale-infrastructure-manager
+  sudo chmod +x scripts/k8s_cluster_creation/start_ansible.sh
+```
 
 After this, put the json file inside the folder scripts/k8s_cluster_creation/json.
-So create the folder json and add the json file downlaoded from UI, eg: scripts/k8s_cluster_creation/json/cluster_dev.json
+Create the folder json and add the json file downlaoded from UI, eg: scripts/k8s_cluster_creation/json/cluster_dev.json
 Now, go on root folder of the git project:
 
 - MacOS:
