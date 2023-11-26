@@ -22,7 +22,7 @@ Cluster node OS availables:
 It is possible configures a k8s cluster also with vms running on cloud providers such as azure, aws, digital ocean, google, etc...
 To integrate dale-infrastructure-manger with vms on cloud, there are two possible scenarios:
 
-- Vms on VPC (Virtual Private Cloud): In this case th ip provided on UI or added manually on json and manifests can be the private ip of the VPC where virtual machines run. In this case if it is not possible reach the vms on public internet, it is possible run this project on local vm inside the VPC. Using the internal ip of the vms inside the VPC. Keep in mind that all vms have to connect on internet to configure the packages repositories. 
+- Vms on VPC (Virtual Private Cloud): In this case th ip provided on UI or added manually on json and manifests can be the private ip of the VPC where virtual machines run. In this case if it is not possible reach the vms on public internet, it is possible run this project on a local vm inside the VPC using the internal ip of the vms (inside the VPC). Keep in mind that all vms have to connect on internet to configure the packages repositories. 
 
 - Public vms: If you istance 'N' public vms or you create a VPC reachable by the external network, it is possible use the public ip of every single vm.
 
