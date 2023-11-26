@@ -1,7 +1,7 @@
 
 # 👨‍💻 DALE-INFRASTRUCTURE-MANAGER
 
-In-house k8s cluster creation using the dale-infrastructure-manager which is a versatile tool leverages Ansible for automation. With the UI you can generate the manifests and the json to run the ansible playbooks via bash script, creating a k8s cluster with kubeadm. There is also the possibility to add new nodes on cluster.
+In-house k8s cluster creation using the dale-infrastructure-manager which is a versatile tool leverages Ansible for automation. With the UI you can generate the manifests and the json to run the ansible playbooks via bash script, creating a k8s cluster with kubeadm. There is also the possibility to add new nodes on cluster. The configuration of the k8s cluster is valid for an on-prem scenario and also for cloud providers such as azure, aws, google, digital ocean, etc...
 
 
 ## 🪅 Compatibility
@@ -15,6 +15,18 @@ This project can be executed on the following platforms:
 Cluster node OS availables:
 
 - Ubuntu Server 22.04
+
+
+# ☁️ Cloud providers integration (azure, aws, digital ocean, etc...)
+
+It is possible configures a k8s cluster also with vms running on cloud providers such as azure, aws, digital ocean, google, etc...
+To integrate dale-infrastructure-manger with vms on cloud, there are two possible scenarios:
+
+- Vms on VPC (Virtual Private Cloud): In this case th ip provided on UI or added manually on json and manifests can be the private ip of the VPC where virtual machines run. In this case if it is not possible reach the vms on public internet, it is possible run this project on local vm inside the VPC. Using the internal ip of the vms inside the VPC. Keep in mind that all vms have to connect on internet to configure the packages repositories. 
+
+- Public vms: If you istance 'N' vms or you create a VPC reachable by the external netowork, use the public ip of every single vm.
+
+Dale-infrastructure-manager work well for both cases on-prem & cloud 🛸🛸
 
 
 ## 🤹‍♂️ Tech Stack
@@ -160,6 +172,32 @@ Now, go on root folder of the git project:
 
 Start the script 'start_ansible.sh' passing by arg. the name of the file json with the nodes configurations to create the cluster. The script will start the execution of the procedure. 
 
+At the end the procedure if doing 'kubectl get nodes' you get error:
+
+```bash
+#W1125 23:56:55.773104   29968 loader.go:221] Config not found: /Users/user1/.kube/config/devops/kubeconfig
+#The connection to the server localhost:8080 was refused - did you specify the right host or port?
+# OR
+#error: error loading config file "/Users/user1/.kube/config": read /Users/user1/.kube/config: is a directory
+```
+
+You need to do the export PATH manually. To do it,
+is necessary copy and past the command suggested by the script 'start_ansible.sh' at the end of the script:
+
+```bash
+#[INFORMATION] If 'kubectl get nodes' does not return the number of nodes on the cluster, maybe you need to run 'export KUBECONFIG' manually. Open the terminal and copy-past this: 'export KUBECONFIG="/Users/user1/.kube/config/cluster-dev/kubeconfig"'
+#[INFORMATION] Kubeconfig configured correctly on the local machine: /Users/user1/.kube/config/cluster-dev/kubeconfig
+```
+
+Now, after you copy the suggested export, on terminal try again 'kubectl get nodes':
+
+```bash
+export KUBECONFIG="/Users/user1/.kube/config/cluster-dev/kubeconfig"
+kubectl get nodes                                                                                       
+#NAME                  STATUS   ROLES                  AGE     VERSION
+#k8s-master-node-1-1   Ready    control-plane,master   20m     v1.28.4
+#k8s-worker-node-1-2   Ready    worker                 2m38s   v1.28.4
+```
 
 ## 🚀 BE - Add new nodes
 

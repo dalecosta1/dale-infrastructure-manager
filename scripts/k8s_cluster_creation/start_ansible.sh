@@ -34,7 +34,7 @@ if [ ! -f "$NODES_JSON_PATH" ]; then
     exit 1
 fi
 
-# Set $HOME and %PWD before become root
+# Set $HOME and $PWD before become root
 HOME_DIR="$HOME"
 PWD_DIR="$PWD"
 
@@ -67,6 +67,7 @@ if [ -n "$nodes_to_add" ]; then
     # 3. Create yml manifest for the new nodes
     #
     # END Continuing with the script...
+    echo "[INFORMATION] Detected new nodes to add: $nodes_to_add"
     echo "[INFORMATION] There are new nodes to add to the cluster, starting the procedure..."
 
     # Starting point 1... 
@@ -115,8 +116,15 @@ if [ -n "$nodes_to_add" ]; then
 
         # Update YAML
         modified_string=$(echo "$hostnames_str" | sed 's/\\"/\\\\\\\\\\\\\\"/g') # Convert for YAML format, adding \\\" instead of \"
-        sed -i "s/^new_json_hostnames: .*/new_json_hostnames: \"$modified_string\"/" "$complete_path_yaml"
-        
+        # For MacOS is different...
+        if is_macos; then
+            # macOS
+            sed -i '' "s/^new_json_hostnames: .*/new_json_hostnames: \"$modified_string\"/" "$complete_path_yaml"
+        else
+            # Ubuntu
+            sed -i "s/^new_json_hostnames: .*/new_json_hostnames: \"$modified_string\"/" "$complete_path_yaml"
+        fi
+
         # Start the playbook to add new nodes on /etc/hosts
         ansible-playbook -i "$PWD_DIR/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD_DIR/ansible/k8s_cluster_creation/playbooks/k8s_add_new_nodes.yml" -e "@$PWD_DIR/$path_vars_ansible_file" --extra-vars "ansible_become_pass=$ssh_user_password" -v
 
@@ -165,11 +173,19 @@ if [ -n "$nodes_to_add" ]; then
         echo "[INFORMATION] Updating node: $hostname"
         echo "[INFORMATION] Updating YAML file: $complete_path_yaml"
         
-        # Clean the YAML
-        sed -i "s/^json_hostnames: .*/json_hostnames: \"$modified_final_string\"/" "$complete_path_yaml"
-        sed -i "s/^new_json_hostnames: .*/new_json_hostnames: \"$new_json_hosts\"/" "$complete_path_yaml"
+        # Clean the YAML...
+        # For MacOS is different...
+        if is_macos; then
+            # macOS
+            sed -i '' "s/^json_hostnames: .*/json_hostnames: \"$modified_final_string\"/" "$complete_path_yaml"
+            sed -i '' "s/^new_json_hostnames: .*/new_json_hostnames: \"$new_json_hosts\"/" "$complete_path_yaml"
+        else
+            # Ubuntu
+            sed -i "s/^json_hostnames: .*/json_hostnames: \"$modified_final_string\"/" "$complete_path_yaml"
+            sed -i "s/^new_json_hostnames: .*/new_json_hostnames: \"$new_json_hosts\"/" "$complete_path_yaml"
+        fi
 
-        sed_status=$?
+        sed_status=$? # Sed status
 
         # Check the exit status and take actions accordingly
         if [[ $sed_status -eq 0 ]]; then
@@ -214,7 +230,7 @@ if [ -n "$nodes_to_add" ]; then
         # Copy file
         sudo cp "$path_template_node_yml" "$complete_file_path"
 
-        cp_status=$?
+        cp_status=$? # cp status
 
         # Check the exit status and take actions accordingly
         if [[ $cp_status -eq 0 ]]; then
@@ -227,20 +243,37 @@ if [ -n "$nodes_to_add" ]; then
         # Wait for background process (sed) to complete
         wait
 
-        # Update the values in the YAML copied
-        sed -i \
-            -e "s|^ansible_host: .*|ansible_host: \"$ansible_host\"|" \
-            -e "s|^node_type: .*|node_type: \"$node_type\"|" \
-            -e "s|^node_ssh_user: .*|node_ssh_user: \"$ssh_username\"|" \
-            -e "s|^ssh_private_key_path: .*|ssh_private_key_path: \"$ssh_key_path\"|" \
-            -e "s|^required_ports: .*|required_ports: \"$net_ports_conf\"|" \
-            -e "s|^open_ports_for_master_or_worker: .*|open_ports_for_master_or_worker: \"$ports_open_method\"|" \
-            -e "s|^node_ip: .*|node_ip: \"$ip\"|" \
-            -e "s|^env: .*|env: \"$physical_env\"|" \
-            -e "s|^node_name: .*|node_name: \"$hostname\"|" \
-            "$complete_file_path"
+        # Update the values in the YAML copied...
+        # For MacOS is different...
+        if is_macos; then
+            # macOS
+            sed -i '' \
+                -e "s|^ansible_host: .*|ansible_host: \"$ansible_host\"|" \
+                -e "s|^node_type: .*|node_type: \"$node_type\"|" \
+                -e "s|^node_ssh_user: .*|node_ssh_user: \"$ssh_username\"|" \
+                -e "s|^ssh_private_key_path: .*|ssh_private_key_path: \"$ssh_key_path\"|" \
+                -e "s|^required_ports: .*|required_ports: \"$net_ports_conf\"|" \
+                -e "s|^open_ports_for_master_or_worker: .*|open_ports_for_master_or_worker: \"$ports_open_method\"|" \
+                -e "s|^node_ip: .*|node_ip: \"$ip\"|" \
+                -e "s|^env: .*|env: \"$physical_env\"|" \
+                -e "s|^node_name: .*|node_name: \"$hostname\"|" \
+                "$complete_file_path"
+        else
+            # Ubuntu
+            sed -i \
+                -e "s|^ansible_host: .*|ansible_host: \"$ansible_host\"|" \
+                -e "s|^node_type: .*|node_type: \"$node_type\"|" \
+                -e "s|^node_ssh_user: .*|node_ssh_user: \"$ssh_username\"|" \
+                -e "s|^ssh_private_key_path: .*|ssh_private_key_path: \"$ssh_key_path\"|" \
+                -e "s|^required_ports: .*|required_ports: \"$net_ports_conf\"|" \
+                -e "s|^open_ports_for_master_or_worker: .*|open_ports_for_master_or_worker: \"$ports_open_method\"|" \
+                -e "s|^node_ip: .*|node_ip: \"$ip\"|" \
+                -e "s|^env: .*|env: \"$physical_env\"|" \
+                -e "s|^node_name: .*|node_name: \"$hostname\"|" \
+                "$complete_file_path"
+        fi
 
-        sed_status=$?
+        sed_status=$? # Result of sed
 
         # Check the exit status and take actions accordingly
         if [[ $sed_status -eq 0 ]]; then
