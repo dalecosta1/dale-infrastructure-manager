@@ -146,7 +146,6 @@ Before to start, understand that ansible work with underscore, so all files insi
 
 Make sure 'start_ansible.sh' is executable (done by the script setup.sh):
 
-- MacOS:
 ```bash
   cd dale-infrastructure-manager
   sudo chmod +x scripts/k8s_cluster_creation/start_ansible.sh
@@ -168,7 +167,7 @@ Now, go on root folder of the git project:
 ```bash
   cd dale-infrastructure-manager
   # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
-  ./scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
+  . scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
 ```
 
 Start the script 'start_ansible.sh' passing by arg. the name of the file json with the nodes configurations to create the cluster. The script will start the execution of the procedure. 
@@ -253,7 +252,7 @@ Now is possible run again the script:
 ```bash
   cd dale-infrastructure-manager
   # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
-  ./scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
+  . scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
 ```
 
 ## 📜 Template YAML
