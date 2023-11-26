@@ -1,5 +1,5 @@
 
-# 👨‍💻 DALE-INFRASTRUCTURE-MANAGER
+# DALE-INFRASTRUCTURE-MANAGER
 
 In-house k8s cluster creation using the dale-infrastructure-manager which is a versatile tool leverages Ansible for automation. With the UI you can generate the manifests and the json to run the ansible playbooks via bash script, creating a k8s cluster with kubeadm. There is also the possibility to add new nodes on cluster. The configuration of the k8s cluster is valid for an on-prem scenario and also for cloud providers such as azure, aws, google, digital ocean, etc...
 
@@ -30,7 +30,7 @@ If you work on an on-prem network, you can use the internal nodes ip of the netw
 The dale-infrastructure-manager fits well for both cases on-prem & cloud 🛸🛸
 
 
-## 🤹‍♂️ Tech Stack
+## 👨‍💻 Tech Stack
 
 **UI:** react-ts
 
@@ -166,7 +166,7 @@ Now, go on root folder of the git project:
 - Ubuntu:
 ```bash
   cd dale-infrastructure-manager
-  # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
+  # Start the bash script... eg: . scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
   . scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
 ```
 
