@@ -17,7 +17,7 @@ Cluster node OS availables:
 - Ubuntu Server 22.04
 
 
-## ☁️ Cloud providers integration (azure, aws, digital ocean, etc...)
+## ☁️ Cloud providers integration
 
 It is possible configures a k8s cluster also with vms running on cloud providers such as azure, aws, digital ocean, google, etc...
 To integrate dale-infrastructure-manger with vms on cloud, there are two possible scenarios:
