@@ -26,7 +26,7 @@ To integrate dale-infrastructure-manger with vms on cloud, there are two possibl
 
 - Public vms: If you istance 'N' public vms or you create a VPC reachable by the external network, it is possible use the public ip of every single vm.
 
-If you work on on-prem network, you can use the internal nodes ip of the network (eg: 192.168.1.214, 192.168.1.101, 192.168.1.45).
+If you work on an on-prem network, you can use the internal nodes ip of the network (eg: 192.168.1.214, 192.168.1.101, 192.168.1.45).
 The dale-infrastructure-manager fit well for both cases on-prem & cloud 🛸🛸
 
 
