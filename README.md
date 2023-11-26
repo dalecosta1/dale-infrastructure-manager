@@ -8,9 +8,9 @@ In-house k8s cluster creation using the dale-infrastructure-manager which is a v
 
 This project can be executed on the following platforms:
 
-- Windows (using Ubuntu via WSL)
+- Windows 11 (using Ubuntu via WSL)
 - MacOS (arm + amd)
-- Ubuntu
+- Ubuntu 22.04
 
 Cluster node OS availables:
 
