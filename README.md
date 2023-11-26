@@ -177,7 +177,7 @@ At the end the procedure if doing 'kubectl get nodes' you get error:
 ```bash
 #W1125 23:56:55.773104   29968 loader.go:221] Config not found: /Users/user1/.kube/config/devops/kubeconfig
 #The connection to the server localhost:8080 was refused - did you specify the right host or port?
-# OR
+#OR
 #error: error loading config file "/Users/user1/.kube/config": read /Users/user1/.kube/config: is a directory
 ```
 
