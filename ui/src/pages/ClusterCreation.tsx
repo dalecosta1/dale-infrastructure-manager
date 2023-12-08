@@ -19,7 +19,9 @@ import {
   SelectChangeEvent,
   Box,
   InputAdornment,
-  IconButton
+  IconButton,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 
 const ClusterCreation: React.FC = () => {
@@ -157,6 +159,49 @@ const ClusterCreation: React.FC = () => {
     setShowPassword(!showPassword);
   };
 
+  // HAProxy 
+  const [haProxyConfigList, setHaProxyConfigList] = useState<HAProxyConfig[]>([]);
+
+  interface HAProxyConfig {
+    IP: string;
+    Port: string;
+    SSL: boolean;
+  }
+
+  const getEmptyHaProxyConfig = () => ({
+    IP: '',
+    Port: '',
+    SSL: false,
+  });
+
+const handleHaProxyConfigChange = 
+  (index: number, name: keyof HAProxyConfig) => 
+  (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newList = [...haProxyConfigList];
+
+    // Handle boolean and string values separately
+    if (name === "SSL" && event.target.type === "checkbox") {
+        // TypeScript knows that "SSL" is a boolean
+        newList[index][name] = event.target.checked;
+    } else {
+        // All other fields are treated as strings
+        newList[index][name as keyof Omit<HAProxyConfig, 'SSL'>] = event.target.value;
+    }
+
+    setHaProxyConfigList(newList);
+  };
+  
+  const addHaProxyConfig = () => {
+    setHaProxyConfigList([...haProxyConfigList, getEmptyHaProxyConfig()]);
+  };
+  
+  const removeHaProxyConfig = (index: number) => {
+    const newList = [...haProxyConfigList];
+    newList.splice(index, 1);
+    setHaProxyConfigList(newList);
+  };
+
+
   return (
     <Container maxWidth="sm">
       <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
@@ -165,6 +210,7 @@ const ClusterCreation: React.FC = () => {
         <strong>Cluster Configuration</strong>
       </Typography>
       <form>
+        {/* Cluster configuration */}  
         <div>
           <TextField
             label="Cluster Name"
@@ -251,7 +297,8 @@ const ClusterCreation: React.FC = () => {
         </div>
 
         <br/>
-
+        
+        {/* Node configuration */}  
         <div>
           {nodeConfigList.map((nodeConfig, index) => (
             <Box key={index} mb={2}>
@@ -379,7 +426,53 @@ const ClusterCreation: React.FC = () => {
             Add Node Configuration
           </Button>          
         </div>
-        
+
+        <br/><br/>
+
+        {/* HA Proxy configuration */}        
+        <div>
+          {haProxyConfigList.map((config, index) => (
+            <Box key={index} mb={2}>
+              <Typography variant="h6" gutterBottom>
+                HA Proxy Configuration {index + 1}
+              </Typography>
+              <TextField
+                label="IP"
+                value={config.IP}
+                onChange={handleHaProxyConfigChange(index, 'IP')}
+                fullWidth
+                margin="normal"
+                required
+              />
+              <TextField
+                label="Port"
+                value={config.Port}
+                onChange={handleHaProxyConfigChange(index, 'Port')}
+                fullWidth
+                margin="normal"
+                required
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={config.SSL}
+                    onChange={handleHaProxyConfigChange(index, 'SSL')}
+                    name="SSL"
+                  />
+                }
+                label="SSL Enabled"
+              />
+              <Button variant="outlined" color="error" onClick={() => removeHaProxyConfig(index)}>
+                Remove Configuration
+              </Button>
+            </Box>
+          ))}
+
+          <Button variant="outlined" onClick={addHaProxyConfig}>
+            Add HA Proxy Configuration
+          </Button>
+        </div>
+
         <br/><br/>
 
         <Button variant="contained" color="primary" onClick={handleSubmit} style={{ marginLeft: 'auto', display: 'block' }}>
