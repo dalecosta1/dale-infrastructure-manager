@@ -1,6 +1,7 @@
+/* eslint-disable no-unreachable */
 /* eslint-disable no-useless-escape */
-import { FormDataModel, NodeConfigItemModel } from "../models/ClusterCreation/NodeConfigItemModel";
-import ClusterConfigModel, { NodeConfig } from '../models/ClusterCreation/ClusterConfigModel';
+import { FormDataModel, HAProxy, HAProxyCommon, NodeConfigItemModel } from "../models/ClusterCreation/NodeConfigItemModel";
+import ClusterConfigModel, { HAProxyConfig, NodeConfig } from '../models/ClusterCreation/ClusterConfigModel';
 
 interface ReturnYamlModel {
     file: string,
@@ -101,7 +102,95 @@ local_path_git: "${formData.PROJECT_GIT_PATH}"
         }  
     }
 
-    createJson(formData: FormDataModel, nodeConfigList: NodeConfigItemModel[]) { 
+    createHAProxyConfig(haproxyCommon: HAProxyCommon, haproxyConfigList: HAProxy[]) {
+        let haproxy: HAProxyConfig = {
+            enabled: '',
+            ssl: {
+                enabled: '',
+                dns: ''
+            },
+            haproxy_common_cfg: {
+                password: '',
+                vip: '',
+            },
+            haproxy_to_configure: [],
+            haproxy_to_add: [],
+        };
+        try {
+            // Check that haproxy is enabled
+            if (haproxyConfigList.length > 0) {
+                haproxy.enabled = 'true';
+
+                // Check that the password is not empty
+                if (haproxyCommon.password.length === 0) {
+                    return { success: false, message: 'Please provide a password for the HAProxy configuration.', result: haproxy };
+                } else {
+                    // Set password
+                    haproxy.haproxy_common_cfg.password = haproxyCommon.password;
+                }
+                
+                // Check that the vip is not empty
+                if (haproxyCommon.vip.length === 0) {
+                    return { success: false, message: 'Please provide a vip for the HAProxy configuration.', result: haproxy };
+                } else {
+                    // Set vip
+                    haproxy.haproxy_common_cfg.vip = haproxyCommon.vip;
+                }
+                
+                // Loop through haproxyConfigList to populate haproxy_to_configure
+                for (let index = 0; index < haproxyConfigList.length; index++) {
+                    // Save single haproxy
+                    const haproxyConfig = haproxyConfigList[index];
+                    // Add haproxy
+                    const haproxyData = {
+                        ip: `${haproxyConfig.ip}`,
+                        lan_interface: `${haproxyConfig.lan_interface}`,
+                        state: `${haproxyConfig.state}`,
+                        hostname: `${haproxyConfig.hostname}`,
+                        router_id: `${haproxyConfig.router_id}`,
+                        priority: `${haproxyConfig.priority}`,
+                        ssh_endpoint: `${haproxyConfig.ssh_endpoint}`,
+                        ssh_username: `${haproxyConfig.ssh_username}`,
+                        ssh_password: `${haproxyConfig.ssh_password}`,
+                        ssh_key_path: `${haproxyConfig.ssh_key_path}`,
+                        physical_env: `${haproxyConfig.physical_env}`,
+                        internal_or_external: `${haproxyConfig.internal_or_external}`,
+                    };
+                    haproxy.haproxy_to_configure.push(haproxyData);
+                }
+                haproxyCommon.sslEnabled = true;
+            } else {
+                // Haproxy is not enabled
+                haproxy.enabled = 'false';
+                haproxy.haproxy_common_cfg.password = '';
+                haproxy.haproxy_common_cfg.vip = '';
+                haproxyCommon.sslEnabled = false;
+            }
+
+            // Check that ssl is enabled
+            if (haproxyCommon.sslEnabled) {
+                haproxy.ssl.enabled = 'true';
+                // Check that the domain is not empty
+                if (haproxyCommon.domain.length === 0) {
+                    return { success: false, message: 'Please provide a domain name for the HAProxy configuration.', result: haproxy };
+                } else {
+                    // Set dns
+                    haproxy.ssl.dns = haproxyCommon.domain;
+                }
+            } else {
+                // Ssl is not enabled
+                haproxy.ssl.enabled = 'false';
+                haproxy.ssl.dns = '';
+            }
+
+            // Return a response
+            return { success: true, message: 'HAProxy configured!', result: haproxy };
+        } catch (error: any) {
+            return { success: false, message: `${error.message}. An error occurred in ui.src.be.ClusterCreation.createHAProxyConfig during the configuration of the proxies.` || 'An error occurred in ui.src.be.ClusterCreation.createHAProxyConfig during the configuration of the proxies.', result: haproxy };
+        }  
+    }
+
+    createJson(formData: FormDataModel, nodeConfigList: NodeConfigItemModel[], haProxy: HAProxyConfig) { 
         try {   
             // Declare variables
             let hostnameMasterFile = "";
@@ -133,6 +222,7 @@ local_path_git: "${formData.PROJECT_GIT_PATH}"
                     net_ports_conf: `${node.REQ_PORTS}`,
                     ports_open_method: `${node.OPEN_PORTS}`,
                     ansible_host: `${node.ANSIBLE_HOST}`,
+                    master_type: `${node.MASTER_TYPE}`,
                 };
                 nodesDataList.push(nodeData);
             }
@@ -153,10 +243,11 @@ local_path_git: "${formData.PROJECT_GIT_PATH}"
             ports_env: formData.ENV,
             project_git_path: formData.PROJECT_GIT_PATH,
             nodes_to_add: [],
+            haproxy: haProxy,
             });
         
             // Return message
-            return { success: true, message: 'Json created!', result:  clusterConfigInstance.toString() };
+            return { success: true, message: 'Json created!', result: clusterConfigInstance.toString() };
 
         } catch (error: any) {
             return { success: false, message: `${error.message}. An error occurred in ui.src.be.ClusterCreation.createJson during the creation of the json.` || 'An error occurred in ui.src.be.ClusterCreation.createJson during the creation of the json.', result: "" };

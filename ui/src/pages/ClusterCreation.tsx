@@ -5,7 +5,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { NodeConfigItemModel } from '../models/ClusterCreation/NodeConfigItemModel';
+import { NodeConfigItemModel, HAProxy } from '../models/ClusterCreation/NodeConfigItemModel';
 import ClusterCreationBe from '../be/ClusterCreationBe';
 import {
   TextField,
@@ -84,8 +84,18 @@ const ClusterCreation: React.FC = () => {
       return;
     }
 
+    // Create the part of the HAProxy
+    const haProxyConfig = clusterCreationBe.createHAProxyConfig(haProxyCommonConfig, haProxyConfigList);
+
+    // Check if haProxyConfig return ok
+    if (!haProxyConfig.success) {
+      // Show an error notification
+      toast.error(haProxyConfig.message);
+      return;
+    }
+
     // Call the backend function to create the json
-    const createJsonResult = clusterCreationBe.createJson(formData, nodeConfigList);
+    const createJsonResult = clusterCreationBe.createJson(formData, nodeConfigList, haProxyConfig.result);
     if (!createJsonResult.success) {
       // Show an error notification
       toast.error(createJsonResult.message);
@@ -150,7 +160,15 @@ const ClusterCreation: React.FC = () => {
     NODE_TYPE: '',
     NODE_IP: '',
     PHYSICAL_ENV: '',
+    MASTER_TYPE: '',
   });  
+
+  // For storj secret
+  const [showPasswordStorj, setShowPasswordStorj] = useState(false);
+
+  const handleTogglePasswordVisibilityStorj = () => {
+    setShowPasswordStorj(!showPasswordStorj);
+  };
 
   // For ssh password
   const [showPassword, setShowPassword] = useState(false);
@@ -159,48 +177,85 @@ const ClusterCreation: React.FC = () => {
     setShowPassword(!showPassword);
   };
 
+  // For haproxy password
+  const [showPasswordP, setShowPasswordP] = useState(false);
+
+  const handleTogglePasswordVisibilityP = () => {
+    setShowPasswordP(!showPasswordP);
+  };
+
+  // For username password of haproxy
+  const [showPasswordPP, setShowPasswordPP] = useState(false);
+
+  const handleTogglePasswordVisibilityPP = () => {
+    setShowPasswordPP(!showPasswordPP);
+  };
+
   // HAProxy 
-  const [haProxyConfigList, setHaProxyConfigList] = useState<HAProxyConfig[]>([]);
+  const [haProxyConfigList, setHaProxyConfigList] = useState<HAProxy[]>([]);
 
-  interface HAProxyConfig {
-    IP: string;
-    Port: string;
-    SSL: boolean;
-  }
-
-  const getEmptyHaProxyConfig = () => ({
-    IP: '',
-    Port: '',
-    SSL: false,
+  const [haProxyCommonConfig, setHaProxyCommonConfig] = useState({
+    password: '',
+    vip: '',
+    sslEnabled: false,
+    domain: ''
   });
 
-const handleHaProxyConfigChange = 
-  (index: number, name: keyof HAProxyConfig) => 
-  (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newList = [...haProxyConfigList];
-
-    // Handle boolean and string values separately
-    if (name === "SSL" && event.target.type === "checkbox") {
-        // TypeScript knows that "SSL" is a boolean
-        newList[index][name] = event.target.checked;
+  const handleHaProxyCommonChange = (name: keyof typeof haProxyCommonConfig) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (name === 'sslEnabled') {
+      // If sslEnabled is being unchecked, also clear the domain field
+      const isSslEnabled = event.target.checked;
+      setHaProxyCommonConfig({ 
+        ...haProxyCommonConfig, 
+        sslEnabled: isSslEnabled, 
+        domain: isSslEnabled ? haProxyCommonConfig.domain : '' 
+      });
     } else {
-        // All other fields are treated as strings
-        newList[index][name as keyof Omit<HAProxyConfig, 'SSL'>] = event.target.value;
+      // For all other fields, just update the field value
+      setHaProxyCommonConfig({ ...haProxyCommonConfig, [name]: event.target.value });
     }
+  };
 
+  const getEmptyHaProxyConfig = () => ({
+    ip: '',
+    lan_interface: '',
+    state: '',
+    hostname: '',
+    router_id: '',
+    priority: '',
+    ssh_endpoint: '',
+    ssh_username: '',
+    ssh_password: '',
+    ssh_key_path: '',
+    physical_env: '',
+    internal_or_external: '',
+  });
+
+  const handleHaProxySelectConfigChange = 
+  (index: number, name: keyof HAProxy) => 
+  (event: SelectChangeEvent<string>) => {
+    const newList = [...haProxyConfigList];
+    newList[index][name] = event.target.value;
     setHaProxyConfigList(newList);
   };
-  
+
+  const handleHaProxyNodeConfigChange = 
+  (index: number, name: keyof HAProxy) => 
+  (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newList = [...haProxyConfigList];
+    newList[index][name] = event.target.value;
+    setHaProxyConfigList(newList);
+  };
+
   const addHaProxyConfig = () => {
     setHaProxyConfigList([...haProxyConfigList, getEmptyHaProxyConfig()]);
   };
-  
+
   const removeHaProxyConfig = (index: number) => {
     const newList = [...haProxyConfigList];
     newList.splice(index, 1);
     setHaProxyConfigList(newList);
-  };
-
+  };  
 
   return (
     <Container maxWidth="sm">
@@ -219,14 +274,28 @@ const handleHaProxyConfigChange =
             fullWidth
             margin="normal"
             required
-            />
+          />
           <TextField
             label="Storj Export"
+            type={showPasswordStorj ? 'text' : 'password'}
             value={formData.STORJ_SECRET}
             onChange={handleChange('STORJ_SECRET')}
             fullWidth
             margin="normal"
             required
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={handleTogglePasswordVisibilityStorj}
+                    edge="end"
+                  >
+                    {showPasswordStorj ? <Visibility /> : <VisibilityOff />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
           />
           <TextField
             label="Storj Bucket"
@@ -244,7 +313,6 @@ const handleHaProxyConfigChange =
             margin="normal"
             required
           />         
-
           <FormControl fullWidth margin="normal" required>
             <InputLabel id="k8s-version-label">K8s Version</InputLabel>
             <Select
@@ -258,7 +326,6 @@ const handleHaProxyConfigChange =
               <MenuItem value="1.28.2-00">1.28.2</MenuItem>
             </Select>
           </FormControl>
-
           <FormControl fullWidth margin="normal" required>
             <InputLabel id="cri-os-label">OS</InputLabel>
             <Select
@@ -271,7 +338,6 @@ const handleHaProxyConfigChange =
               <MenuItem value="xUbuntu_22.04">Ubuntu Server 22.04</MenuItem>
             </Select>
           </FormControl>
-
           <FormControl fullWidth margin="normal" required>
             <InputLabel id="env-label">Ports Env</InputLabel>
             <Select
@@ -285,7 +351,6 @@ const handleHaProxyConfigChange =
               <MenuItem value="dev">dev</MenuItem>
             </Select>
           </FormControl>
-
           <TextField
             label="Project Git Path"
             value={formData.PROJECT_GIT_PATH}
@@ -303,16 +368,8 @@ const handleHaProxyConfigChange =
           {nodeConfigList.map((nodeConfig, index) => (
             <Box key={index} mb={2}>
               <Typography variant="h6" gutterBottom>
-                <strong>Node Configuration {index + 1}</strong>           
+                Node Configuration {index + 1}           
               </Typography>
-              <TextField
-                label="Ssh endpoint"
-                value={nodeConfig.ANSIBLE_HOST}
-                onChange={handleNodeConfigChange(index, 'ANSIBLE_HOST')}
-                fullWidth
-                margin="normal"
-                required
-              />
               <TextField
                 label="Hostname"
                 value={nodeConfig.HOSTNAME}
@@ -337,19 +394,14 @@ const handleHaProxyConfigChange =
                 margin="normal"
                 required
               />
-              <FormControl fullWidth margin="normal" required>
-                <InputLabel id="node-type-label">Node Type</InputLabel>
-                <Select
-                  labelId="node-type-label"
-                  id="node-type"
-                  value={nodeConfig.NODE_TYPE}
-                  onChange={handleNodeConfigSelectChange(index, 'NODE_TYPE')}
-                  required
-                >
-                  <MenuItem value="master">master</MenuItem>
-                  <MenuItem value="worker">worker</MenuItem>
-                </Select>
-              </FormControl>
+              <TextField
+                label="Ssh endpoint"
+                value={nodeConfig.ANSIBLE_HOST}
+                onChange={handleNodeConfigChange(index, 'ANSIBLE_HOST')}
+                fullWidth
+                margin="normal"
+                required
+              />
               <TextField
                 label="Ssh Username"
                 value={nodeConfig.SSH_USER}
@@ -385,6 +437,19 @@ const handleHaProxyConfigChange =
                 required
               />
               <FormControl fullWidth margin="normal" required>
+                <InputLabel id="node-type-label">Node Type</InputLabel>
+                <Select
+                  labelId="node-type-label"
+                  id="node-type"
+                  value={nodeConfig.NODE_TYPE}
+                  onChange={handleNodeConfigSelectChange(index, 'NODE_TYPE')}
+                  required
+                >
+                  <MenuItem value="master">master</MenuItem>
+                  <MenuItem value="worker">worker</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth margin="normal" required>
                 <InputLabel id="req-ports-label">Require Network Ports Configuration</InputLabel>
                 <Select
                   labelId="req-ports-label"
@@ -412,64 +477,224 @@ const handleHaProxyConfigChange =
                   <MenuItem value="all">all</MenuItem>
                 </Select>
               </FormControl>
+              <FormControl fullWidth margin="normal" required>
+                <InputLabel id="open-ports-label">Master Type (only for HAProxy enabeld and master nodes)</InputLabel>
+                <Select
+                  labelId="open-ports-label"
+                  id="open-ports"
+                  value={nodeConfig.MASTER_TYPE}
+                  onChange={handleNodeConfigSelectChange(index, 'MASTER_TYPE')}
+                  required
+                >
+                  <MenuItem value="not_configured">Not Configured</MenuItem>
+                  <MenuItem value="master">master</MenuItem>
+                  <MenuItem value="backup">backup</MenuItem>
+                </Select>
+              </FormControl>
               <br/>
               <Button variant="outlined" color="error" onClick={() => removeNodeConfig(index)}>
                 Remove Node
               </Button>
-              <br/>
+              <br/><br/>
             </Box>
           ))}
-          
-          <br/><br/>
 
           <Button variant="outlined" onClick={addNodeConfig}>
             Add Node Configuration
           </Button>          
         </div>
 
-        <br/><br/>
+        <br/><br/><br/>
 
         {/* HA Proxy configuration */}        
         <div>
+          <Typography variant="h5" gutterBottom>
+            <strong>HAProxy Common Configuration</strong>
+          </Typography>
+          <TextField
+            label="HAProxy Virtual IP (VIP)"
+            value={haProxyCommonConfig.vip}
+            onChange={handleHaProxyCommonChange('vip')}
+            fullWidth
+            margin="normal"
+            required
+          />
+          <TextField
+            label="HAProxy Password"
+            type={showPasswordP ? 'text' : 'password'}
+            value={haProxyCommonConfig.password}
+            onChange={handleHaProxyCommonChange('password')}
+            fullWidth
+            margin="normal"
+            required
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={handleTogglePasswordVisibilityP}
+                    edge="end"
+                  >
+                    {showPasswordP ? <Visibility /> : <VisibilityOff />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={haProxyCommonConfig.sslEnabled}
+                onChange={handleHaProxyCommonChange('sslEnabled')}
+                name="sslEnabled"
+              />
+            }
+            label="SSL Enabled"
+          />
+          {haProxyCommonConfig.sslEnabled && (
+            <TextField
+              label="Domain for SSL Certificate"
+              value={haProxyCommonConfig.domain}
+              onChange={handleHaProxyCommonChange('domain')}
+              fullWidth
+              margin="normal"
+              required={haProxyCommonConfig.sslEnabled}
+            />
+          )}
+          
+          <br/><br/>
+          
           {haProxyConfigList.map((config, index) => (
             <Box key={index} mb={2}>
               <Typography variant="h6" gutterBottom>
-                HA Proxy Configuration {index + 1}
+                HAProxy Node Configuration {index + 1}
               </Typography>
               <TextField
-                label="IP"
-                value={config.IP}
-                onChange={handleHaProxyConfigChange(index, 'IP')}
+                label="Hostname"
+                value={config.hostname}
+                onChange={handleHaProxyNodeConfigChange(index, 'hostname')}
                 fullWidth
                 margin="normal"
                 required
               />
               <TextField
-                label="Port"
-                value={config.Port}
-                onChange={handleHaProxyConfigChange(index, 'Port')}
+                label="LAN Interface"
+                value={config.lan_interface}
+                onChange={handleHaProxyNodeConfigChange(index, 'lan_interface')}
                 fullWidth
                 margin="normal"
                 required
               />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={config.SSL}
-                    onChange={handleHaProxyConfigChange(index, 'SSL')}
-                    name="SSL"
-                  />
-                }
-                label="SSL Enabled"
+              <TextField
+                label="IP Address"
+                value={config.ip}
+                onChange={handleHaProxyNodeConfigChange(index, 'ip')}
+                fullWidth
+                margin="normal"
+                required
               />
+              <TextField
+                label="Router ID"
+                value={config.router_id}
+                onChange={handleHaProxyNodeConfigChange(index, 'router_id')}
+                fullWidth
+                margin="normal"
+                required
+              />
+              <TextField
+                label="Priority"
+                value={config.priority}
+                onChange={handleHaProxyNodeConfigChange(index, 'priority')}
+                fullWidth
+                margin="normal"
+                required
+              />
+              <TextField
+                label="SSH Endpoint"
+                value={config.ssh_endpoint}
+                onChange={handleHaProxyNodeConfigChange(index, 'ssh_endpoint')}
+                fullWidth
+                margin="normal"
+                required
+              />
+              <TextField
+                label="SSH Username"
+                value={config.ssh_username}
+                onChange={handleHaProxyNodeConfigChange(index, 'ssh_username')}
+                fullWidth
+                margin="normal"
+                required
+              />
+              <TextField
+                label="SSH Password"
+                type={showPasswordPP ? 'text' : 'password'}
+                value={config.ssh_password}
+                onChange={handleHaProxyNodeConfigChange(index, 'ssh_password')}
+                fullWidth
+                margin="normal"
+                required
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={handleTogglePasswordVisibilityPP} edge="end">
+                        {showPasswordPP ? <Visibility /> : <VisibilityOff />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <TextField
+                label="SSH Key Path"
+                value={config.ssh_key_path}
+                onChange={handleHaProxyNodeConfigChange(index, 'ssh_key_path')}
+                fullWidth
+                margin="normal"
+                required
+              />
+              <TextField
+                label="Physical Environment"
+                value={config.physical_env}
+                onChange={handleHaProxyNodeConfigChange(index, 'physical_env')}
+                fullWidth
+                margin="normal"
+                required
+              />
+              <FormControl fullWidth margin="normal" required>
+                <InputLabel id={`state-label-${index}`}>State</InputLabel>
+                <Select
+                  labelId={`state-label-${index}`}
+                  id={`state-${index}`}
+                  value={config.state}
+                  onChange={handleHaProxySelectConfigChange(index, 'state')}
+                  required
+                >
+                  <MenuItem value="MASTER">MASTER</MenuItem>
+                  <MenuItem value="BACKUP">BACKUP</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth margin="normal" required>
+                <InputLabel id={`ie-label-${index}`}>Internal or External</InputLabel>
+                <Select
+                  labelId={`ie-label-${index}`}
+                  id={`ie-${index}`}
+                  value={config.internal_or_external}
+                  onChange={handleHaProxySelectConfigChange(index, 'internal_or_external')}
+                  required
+                >
+                  <MenuItem value="external">External</MenuItem>
+                  <MenuItem value="internal">Internal</MenuItem>
+                </Select>
+              </FormControl>
+              <br/>
               <Button variant="outlined" color="error" onClick={() => removeHaProxyConfig(index)}>
-                Remove Configuration
+                Remove HAProxy Node
               </Button>
+              <br/><br/>
             </Box>
           ))}
 
           <Button variant="outlined" onClick={addHaProxyConfig}>
-            Add HA Proxy Configuration
+            Add HAProxy Node Configuration
           </Button>
         </div>
 

@@ -10,6 +10,7 @@ interface NodeConfigItem {
   NODE_TYPE: string;
   NODE_IP: string;
   PHYSICAL_ENV: string;
+  MASTER_TYPE: string;
 }
   
 export class NodeConfigItemModel implements NodeConfigItem {
@@ -23,6 +24,7 @@ export class NodeConfigItemModel implements NodeConfigItem {
   NODE_TYPE: string = '';
   NODE_IP: string = '';
   PHYSICAL_ENV: string = '';
+  MASTER_TYPE: string = '';
 
   constructor(data: Partial<NodeConfigItemModel> = {}) {
     Object.assign(this, data);
@@ -56,6 +58,58 @@ export class FormDataModel implements FormData {
   PROJECT_GIT_PATH: string = '';
 
   constructor(data: Partial<NodeConfigItemModel> = {}) {
+    Object.assign(this, data);
+  }
+}
+
+interface HAProxyCommonModel {
+  password: string;
+  vip: string;
+  sslEnabled: boolean;
+  domain: string;
+}
+
+export class HAProxyCommon implements HAProxyCommonModel {
+  password: string = '';
+  vip: string = '';
+  sslEnabled: boolean = false;
+  domain: string = '';
+
+  constructor(data: Partial<HAProxyCommonModel> = {}) {
+    Object.assign(this, data);
+  }
+}
+
+interface HAProxyModel {
+  ip: string;
+  lan_interface: string;
+  state: string;
+  hostname: string;
+  router_id: string;
+  priority: string;
+  ssh_endpoint: string;
+  ssh_username: string;
+  ssh_password: string;
+  ssh_key_path: string;
+  physical_env: string;
+  internal_or_external: string;
+}
+
+export class HAProxy implements HAProxyModel {
+  ip: string = '';
+  lan_interface: string = '';
+  state: string = '';
+  hostname: string = '';
+  router_id: string = '';
+  priority: string = '';
+  ssh_endpoint: string = '';
+  ssh_username: string = '';
+  ssh_password: string = '';
+  ssh_key_path: string = '';
+  physical_env: string = '';
+  internal_or_external: string = '';
+
+  constructor(data: Partial<HAProxyModel> = {}) {
     Object.assign(this, data);
   }
 }

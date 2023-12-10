@@ -1,3 +1,37 @@
+
+/* HAProxy configuration */
+export interface SslConfig {
+    enabled: string;
+    dns: string;
+}
+
+export interface HAProxyCommonConfig {
+    password: string;
+    vip: string;
+}
+
+export interface HAProxyNodeConfig {
+    hostname: string;
+    lan_interface: string;
+    ip: string;
+    state: string;
+    router_id: string;
+    priority: string;
+    ssh_endpoint: string;
+    ssh_username: string;
+    ssh_password: string;
+    ssh_key_path: string;
+}
+
+export interface HAProxyConfig {
+    enabled: string;
+    ssl: SslConfig;
+    haproxy_common_cfg: HAProxyCommonConfig;
+    haproxy_to_configure: HAProxyNodeConfig[];
+    haproxy_to_add: HAProxyNodeConfig[];
+}
+
+/* Nodes configuration */
 export interface NodeConfig {
     node_type: string;
     ssh_user_password: string;
@@ -9,9 +43,11 @@ export interface NodeConfig {
     ssh_key_path: string,
     net_ports_conf: string,
     ports_open_method: string,
+    master_type: string,
     ansible_host: string;
 }
-  
+
+/* Cluster configuration */
 interface ClusterConfig {
     path_vars_file_master_node_ansible: string;
     ssh_user_password_master_node: string;
@@ -27,6 +63,7 @@ interface ClusterConfig {
     project_git_path: string;
     nodes_to_configure: NodeConfig[];
     nodes_to_add: NodeConfig[];
+    haproxy: HAProxyConfig;
 }
   
 class ClusterConfigModel implements ClusterConfig {
@@ -44,6 +81,19 @@ class ClusterConfigModel implements ClusterConfig {
     project_git_path: string = '';
     nodes_to_configure: NodeConfig[] = [];
     nodes_to_add: NodeConfig[] = [];
+    haproxy: HAProxyConfig = {
+        enabled: '',
+        ssl: {
+            enabled: '',
+            dns: ''
+        },
+        haproxy_common_cfg: {
+            password: '',
+            vip: ''
+        },
+        haproxy_to_configure: [],
+        haproxy_to_add: []
+    };
 
     constructor(data: Partial<ClusterConfigModel> = {}) {
         Object.assign(this, data);
