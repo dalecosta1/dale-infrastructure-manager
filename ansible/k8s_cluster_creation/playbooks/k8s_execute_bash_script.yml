@@ -1,0 +1,25 @@
+---
+- name: K8s haproxy updates
+  hosts: "{{ target_hosts }}"
+  become: true
+
+  tasks:
+    # Copy the script
+    - name: Copy the script
+      copy:
+        src: "{{ local_path_git }}/ansible/k8s_cluster_creation/playbooks/scripts/{{ script_name }}"
+        dest: "/tmp/{{ script_name }}"
+        mode: '0755'
+
+    # Execute the script passing the arguments
+    - name: Execute the script
+      shell: "/tmp/{{ script_name }} '{{ input_json }}'"
+      when: input_json | length > 0
+
+    # Delete the script
+    - name: Delete the script
+      file:
+        path: "/tmp/{{ script_name }}"
+        state: absent
+      become: true
+      become_user: root

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
 # //////////////////////////////////////////////////////////
 #                     HAProxy Setup                        /
 # //////////////////////////////////////////////////////////
@@ -8,6 +11,7 @@
 # {
 #     "ssl": {
 #         "enabled": true,
+#         "dns_or_ip": "dns",
 #         "dns": "k8s-cluster-dev.mydomain.com"     
 #     },
 #     "haproxy": {
@@ -32,7 +36,6 @@
 #     ]
 # }
 
-
 ############################################
 #               FUNCTIONS                  #
 ############################################
@@ -51,14 +54,6 @@ obtain_certificate() {
     local domain=$1
     sudo certbot certonly --standalone -d "$domain" -d "www.$domain"
 }
-
-
-# This command makes the script more robust 
-# and it provides detailed debugging output.
-# It helps ensure that errors are not ignored,
-# uninitialized variables are caught, 
-# and the script's behavior is clear and predictable.
-set -euxo pipefail
 
 
 ############################################
@@ -102,6 +97,7 @@ haproxy_pwd=$(echo "$json_input" | jq -r '.haproxy.password')
 haproxy_vip=$(echo "$json_input" | jq -r '.haproxy.vip')
 ssl_enabled=$(echo "$json_input" | jq -r '.ssl.enabled')
 ssl_dns=$(echo "$json_input" | jq -r '.ssl.dns')
+dns_or_ip=$(echo "$json_input" | jq -r '.ssl.dns_or_ip')
 master_nodes=$(echo "$json_input" | jq -c '.master_nodes[]')
 
 
@@ -169,8 +165,13 @@ if [ "$ssl_enabled" = "true" ]; then
     # Start writing the HAProxy configuration (WITH SSL)
     {
         echo "frontend kubernetes-frontend"
-        echo "    bind $haproxy_ip:6443"
-        echo "    bind $haproxy_ip:443 ssl crt /etc/haproxy/certs/$ssl_dns.pem"
+        if [ "$dns_or_ip" = "dns" ]; then
+            echo "    bind $ssl_dns:6443"
+            echo "    bind $ssl_dns:443 ssl crt /etc/haproxy/certs/$ssl_dns.pem"
+        else
+            echo "    bind $haproxy_ip:6443"
+            echo "    bind $haproxy_ip:443 ssl crt /etc/haproxy/certs/$ssl_dns.pem"
+        fi        
         echo "    redirect scheme https if !{ ssl_fc }"
         echo "    mode tcp"
         echo "    option tcplog"
@@ -180,12 +181,14 @@ if [ "$ssl_enabled" = "true" ]; then
         echo "    mode tcp"
         echo "    option tcp-check"
         echo "    balance roundrobin"
+        echo "# === BEGIN MASTER NODES ==="
         # Loop through each master node and add it to the config
         while read -r node; do
             node_hostname=$(echo "$node" | jq -r '.hostname')
             node_ip=$(echo "$node" | jq -r '.ip')
             echo "    server $node_hostname $node_ip:6443 check fall 3 rise 2"
         done <<< "$master_nodes"
+        echo "# === END MASTER NODES ==="
     } > "/etc/haproxy/haproxy.cfg"
 
     # Create a cron job (hook) to renew the certificate
@@ -202,7 +205,11 @@ else
     # Start writing the HAProxy configuration (NO SSL)
     {
         echo "frontend kubernetes-frontend"
-        echo "    bind $haproxy_ip:6443"
+        if [ "$dns_or_ip" = "dns" ]; then
+            echo "    bind $ssl_dns:6443"
+        else
+            echo "    bind $haproxy_ip:6443"
+        fi  
         echo "    mode tcp" 
         echo "    option tcplog"
         echo "    default_backend kubernetes-backend"
@@ -210,19 +217,20 @@ else
         echo "backend kubernetes-backend"
         echo "    mode tcp"
         echo "    option tcp-check"
-        echo "    balance roundrobin"   
+        echo "    balance roundrobin"
+        echo "# === BEGIN MASTER NODES ==="   
         # Loop through each master node and add it to the config
         while read -r node; do
             node_hostname=$(echo "$node" | jq -r '.hostname')
             node_ip=$(echo "$node" | jq -r '.ip')
             echo "    server $node_hostname $node_ip:6443 check fall 3 rise 2"
         done <<< "$master_nodes"
+        echo "# === END MASTER NODES ==="
     } > "/etc/haproxy/haproxy.cfg"
     # Restart and check the status of HAProxy
     echo "[INFORMATION] HAProxy configuration has been updated (no ssl)!"
     sudo systemctl restart haproxy
 fi
-
 # Print message
 echo "[INFORMATION] HAProxy has been restarted!"
 sudo systemctl status haproxy.service

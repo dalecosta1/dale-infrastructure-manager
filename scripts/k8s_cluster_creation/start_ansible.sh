@@ -9,6 +9,158 @@ is_macos() {
     [ "$(uname -s)" == "Darwin" ]
 }
 
+# Function used to get master nodes to configure on haproxy
+create_master_nodes_json() {
+    local nodes_c=$1
+
+    # Find master nodes to add on haproxy
+    local m_nodes=$(echo "$nodes_c" | jq -c '[.[] | select(.node_type == "master")]')
+    
+    # Create a new JSON string with only hostname and ip for each node
+    local filtered_master_nodes=$(echo "$m_nodes" | jq -c '[.[] | {hostname: .hostname, ip: .ip}]')
+
+    # Begin the JSON array
+    local master_nodes_json="["
+
+    # Convert the filtered master nodes JSON string to a Bash array
+    local master_node_array=()
+    readarray -t master_node_array < <(echo "$filtered_master_nodes" | jq -c '.[]')
+
+    # Loop through each node in the Bash array
+    for node in "${master_node_array[@]}"; do
+        # Append this node to the JSON array, followed by a comma
+        master_nodes_json+="$node,"
+    done
+
+    # Remove the last comma and close the JSON array
+    master_nodes_json="${master_nodes_json%,}]"
+
+    # Output the final JSON string
+    echo "$master_nodes_json"
+}
+
+# Function used to setup or update haproxy
+start_playbook_haproxy() {
+    local i_haproxy_enabled=$1
+    local i_nodes_to_add_backup=$2
+    local i_json_data=$3
+    local i_vip=$4
+    local i_ssl_enabled=$5
+    local i_dns=$6
+    local i_dns_or_ip=$7
+    local i_pwd=$8
+
+    # Check if HAProxy is enabled
+    if [ "$i_haproxy_enabled" == "true" ]; then
+        echo "HAProxy script is enabled. Reading configuration..."
+        
+        # Check if there are new HAProxy to add in 'haproxy_to_add'
+        num_to_add=$i_nodes_to_add_backup
+        
+        # Extract and display properties of each HAProxy instance to configure
+        num_instances=$(echo $i_json_data | jq '.haproxy.haproxy_to_configure | length')
+
+        # Populate variables
+        script_name_str=""
+        m_nodes_json=""
+
+        # Check if there are new HAProxy to add
+        # or to configure for the first time 
+        if [ "$num_to_add" -ge 1 ]; then
+            # update.sh
+            script_name_str="update.sh"
+            m_nodes_json=$(create_master_nodes_json "$nodes_to_add_backup")
+            echo "[INFORMATION] Executing 'update.sh' on remotes haproxy..."
+            echo "[INFORMATION] There are '$num_to_add' items in 'haproxy_to_add', Start to configure the new HAProxy..."
+        else
+            # setup.sh
+            script_name_str="setup.sh"
+            m_nodes_json=$(create_master_nodes_json "$nodes_to_configure")
+            echo "[INFORMATION] Executing 'setup.sh' on remotes haproxy..."
+            echo "[INFORMATION] There are '$num_to_add' items in 'haproxy_to_setup', Start to configure the HAProxy..."
+        fi
+
+        # Process the items in 'haproxy_to_add' as needed
+        for ((i=0; i<$num_to_add; i++))
+        do
+            echo "[INFORMATION] HAProxy $((i+1)):"
+            p_hostname=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].hostname")
+            p_lan_interface=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].lan_interface")
+            p_ip_adr=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ip")
+            p_state=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].state")
+            p_router_id=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].router_id")
+            p_priority=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].priority")
+            p_ssh_endpoint=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_endpoint")
+            p_ssh_username=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_username")
+            p_ssh_password=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_password")
+            p_ssh_key_path=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_key_path")
+            p_physical_env=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].physical_env")
+            p_internal_or_external=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].internal_or_external")                
+            echo "-----------------------------------"
+            echo "       NEW HAPROXY TO ADD          "
+            echo "-----------------------------------"
+            echo "  Hostname: $p_hostname"
+            echo "  LAN Interface: $p_lan_interface"
+            echo "  IP: $p_ip_adr"
+            echo "  State: $p_state"
+            echo "  Router ID: $p_router_id"
+            echo "  Priority: $p_priority"
+            echo "  SSH Endpoint: $p_ssh_endpoint"
+            echo "  SSH Username: $p_ssh_username"
+            echo "  SSH Password: *******"
+            echo "  SSH Key Path: $p_ssh_key_path"
+            echo "  Physical Environment: $p_physical_env"
+            echo "  Internal or External: $p_internal_or_external"
+            echo "-----------------------------------"
+
+            # Update the json moving the haproxy_to_add into haproy_to_configure
+            json_str="{
+                \"ssl\": {
+                    \"enabled\": \"$i_ssl_enabled\",
+                    \"dns_or_ip\": \"$i_dns_or_ip\",
+                    \"dns\": \"$i_dns\"
+                },
+                \"haproxy\": {
+                    \"hostname\": \"$p_hostname\",
+                    \"lan_interface\": \"$p_lan_interface\",
+                    \"ip\": \"$p_ip_adr\",
+                    \"state\": \"$p_state\",
+                    \"router_id\": \"$p_router_id\",
+                    \"priority\": \"$p_priority\",
+                    \"password\": \"$p_ssh_password\",
+                    \"vip\":\"$i_vip\"
+                },
+                \"master_nodes\": $m_nodes_json           
+            }"
+
+            # Execute the Ansible playbook
+            echo "[INFORMATION] Running Ansible playbook for HAProxy instance: $hostname"
+            ansible-playbook "$i_pwd/ansible/k8s_cluster_creation/playbooks/k8s_execute_bash_script.yml" --extra-vars "local_path_git=$i_pwd" --extra-vars "script_name=$script_name_str" --extra-vars "input_json=$json_str" --extra-vars "target_hosts=$p_ip_adr ansible_user=$p_ssh_username ansible_become_pass=$p_ssh_password" --extra-vars "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
+            p_playbook_status=$?
+
+            # Check the exit status and take actions accordingly
+            if [[ $p_playbook_status -eq 0 ]]; then
+                echo "[INFORMATION] Playbook to run '$script_name_str' on haproxy executed successfully for: $p_hostname"
+            else
+                echo "[ERROR] Playbook to run '$script_name_str' on haproxy encountered an error for: $p_hostname"
+                exit 1  # Exit the script with an error code
+            fi
+        
+            # Wait for background process (ansible-playbook) to complete
+            wait
+        done
+
+        # Updates json file on tag 'ha_proxy_script' annd
+        # move 'ha_proxy_to_add' into 'ha_proxy_to_configure'
+
+        # print message
+        echo "[INFORMATION] HAProxy configuration completed successfully!"
+    else
+        # Print message
+        echo "[INFORMATION] HAProxy script is not enabled. Skipping configuration..."
+    fi 
+}
+
 
 ######################
 #       SETUP        #
@@ -59,6 +211,7 @@ json_data=$(cat "$NODES_JSON_PATH")
 nodes_to_add=$(echo $json_data | jq -c '.nodes_to_add[]')
 nodes_to_configure=$(echo $json_data | jq -c '.nodes_to_configure[]')
 nodes_to_configure_backup=$nodes_to_configure
+nodes_to_add_backup=$nodes_to_add
 
 # Check if the array is not empty
 if [ -n "$nodes_to_add" ]; then
@@ -339,7 +492,6 @@ BUCKET_NAME=$(echo $json_data | jq -r '.storj_bucket_name')
 BUCKET_SECRET=$(echo $json_data | jq -r '.storj_export')
 CLUSTER_NAME=$(echo $json_data | jq -r '.cluster_name')
 KUBECONFIG_SETUP=$(echo $json_data | jq -r '.kubeconfig_setup')
-HAPROXY_KUBECONFIG_SETUP="$(echo $json_data | jq -r 'haproxy.ssl.kubeconfig_setup')" # For HAPROXY
 DNS_OR_IP=$(echo $json_data | jq -r 'haproxy.ssl.dns_or_ip') # For HAPROXY
 
 # Check if new node or init
@@ -462,6 +614,7 @@ echo -e "${GREEN}[INFORMATION] K8s cluster configured successfully, all nodes ha
 ##############################################################
 
 # Extracting values for haproxy
+HAPROXY_KUBECONFIG_SETUP="false"
 haproxy_enabled_script=$(echo $json_data | jq -c '.haproxy.enabled_script')
 haproxy_enabled=$(echo $json_data | jq -c '.haproxy.enabled')
 ssl_enabled=$(echo $json_data | jq -r '.haproxy.ssl.enabled')
@@ -471,125 +624,25 @@ vip=$(echo $json_data | jq -r '.haproxy.haproxy_common_cfg.vip')
 haproxy_to_configure=$(echo $json_data | jq -c '.haproxy_to_configure[]')
 haproxy_to_add=$(echo $json_data | jq -c '.haproxy_to_add[]')
 
-# Check if HAProxy is enabled
-if [ "$haproxy_enabled" == "true" ]; then
-    echo "HAProxy script is enabled. Reading configuration..."
-    
-    # Check if there are new HAProxy to add in 'haproxy_to_add'
-    num_to_add=$(echo $json_data | jq '.haproxy.haproxy_to_add | length')
-    if [ "$num_to_add" -ge 1 ]; then
-        # Extract and display properties of each HAProxy instance to add
-        num_instances=$(echo $json_data | jq '.haproxy.haproxy_to_add | length')
-        echo "[INFORMATION] There are '$num_instances' items in 'haproxy_to_add', Start to configure the new HAProxy..."
-        
-        # Process the items in 'haproxy_to_add' as needed
-        for ((i=0; i<$num_instances; i++))
-        do
-            echo "[INFORMATION] HAProxy $((i+1)):"
-            hostname=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].hostname")
-            lan_interface=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].lan_interface")
-            ip=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ip")
-            state=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].state")
-            router_id=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].router_id")
-            priority=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].priority")
-            ssh_endpoint=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_endpoint")
-            ssh_username=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_username")
-            ssh_password=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_password")
-            ssh_key_path=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_key_path")
-            physical_env=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].physical_env")
-            internal_or_external=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].internal_or_external")     
-            echo "-----------------------------------"
-            echo "       NEW HAPROXY TO ADD          "
-            echo "-----------------------------------"
-            echo "  Hostname: $hostname"
-            echo "  LAN Interface: $lan_interface"
-            echo "  IP: $ip"
-            echo "  State: $state"
-            echo "  Router ID: $router_id"
-            echo "  Priority: $priority"
-            echo "  SSH Endpoint: $ssh_endpoint"
-            echo "  SSH Username: $ssh_username"
-            echo "  SSH Password: *******"
-            echo "  SSH Key Path: $ssh_key_path"
-            echo "  Physical Environment: $physical_env"
-            echo "  Internal or External: $internal_or_external"
-            echo "-----------------------------------"
-        done
-
-        # Update the json moving the haproxy_to_add into haproy_to_configure
-    else
-        # No new haproxy to add, check if there are haproxy to configure
-        echo "[INFORMATION] No new items to add in 'haproxy_to_add'..."
-        echo "[INFORMATION] Reading from 'haproxy_to_configure'..."
-
-        # HAProxy is enabled, so continue to configure it
-        echo "[INFORMATION] HAProxy enabled == true, so it is enabled. Continuing with HAProxy configuration..."
-        num_to_configure=$(echo $json_data | jq '.haproxy.haproxy_to_configure | length')
-        
-        # Check if there are HAProxy to configure in 'haproxy_to_configure'
-        if [ "$num_to_configure" -ge 1 ]; then
-            # Extract and display properties of each HAProxy instance to configure
-            num_instances=$(echo $json_data | jq '.haproxy.haproxy_to_configure | length')
-            echo "[INFORMATION] There are '$num_instances' items in 'haproxy_to_configure', Start to configure the HAProxy..."
-            
-            # Process the items in 'haproxy_to_add' as needed
-            for ((i=0; i<$num_instances; i++))
-            do
-                echo "[INFORMATION] HAProxy to configure $((i+1)):"
-                hostname=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].hostname")
-                lan_interface=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].lan_interface")
-                ip=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ip")
-                state=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].state")
-                router_id=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].router_id")
-                priority=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].priority")
-                ssh_endpoint=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_endpoint")
-                ssh_username=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_username")
-                ssh_password=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_password")
-                ssh_key_path=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].ssh_key_path")
-                physical_env=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].physical_env")
-                internal_or_external=$(echo $json_data | jq -r ".haproxy.haproxy_to_add[$i].internal_or_external")
-                
-                echo "-----------------------------------"
-                echo "       HAPROXY TO CONFIGURE        "
-                echo "-----------------------------------"
-                echo "  Hostname: $hostname"
-                echo "  LAN Interface: $lan_interface"
-                echo "  IP: $ip"
-                echo "  State: $state"
-                echo "  Router ID: $router_id"
-                echo "  Priority: $priority"
-                echo "  SSH Endpoint: $ssh_endpoint"
-                echo "  SSH Username: $ssh_username"
-                echo "  SSH Password: *******"
-                echo "  SSH Key Path: $ssh_key_path"
-                echo "  Physical Environment: $physical_env"
-                echo "  Internal or External: $internal_or_external"
-                echo "-----------------------------------"
-            done
-        else
-            echo "[INFORMATION] HAProxy to configure is empty. Skipping configuration..."
-        fi
-    fi
-else
-    echo "[INFORMATION] HAProxy script is not enabled. Skipping configuration..."
-fi 
+# Configure haproxy if enabled
+if [ "$haproxy_enabled_script" == "true" ]; then
+    start_palybook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR"
+fi
 
 
 ##################################################
 # UPDATE HAPROXY IF A NEW MASTER NODE IS ADDED   #
 ##################################################
 
-# Check if HAProxy is enabled and if the operation is for new nodes
+# Update haproxy if it has been added new master nodes
 if [ "$haproxy_enabled" == "true" ] && [ "$NEW_NODE_OR_INIT" == "NEW_NODES" ]; then
-    # Get new json with ha_proxy_to_configure + the new master nodes
+    # Start the playbook to 
+    # update the haproxy running the function
+    start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR"
     
-    # Check if it is been added a new master node
-
-    # Extracting values
-
-    # If it is been added a new master node,
-    # update the HAProxy configuration
-    # otherwise skip this step
+    # refresh next the kubeconfig
+    KUBECONFIG_SETUP="true"
+    HAPROXY_KUBECONFIG_SETUP="true"
 else 
     echo "[INFORMATION] HAProxy script is not enabled or the operation is not for new nodes (type of worker). Skipping updates haproxy..."
 fi
@@ -600,9 +653,6 @@ fi
 #######################################################
 
 if [ "$HAPROXY_KUBECONFIG_SETUP" == "true" ]; then
-    # refresh next the kubeconfig
-    KUBECONFIG_SETUP="true"
-
     # Check if add the dns or ip to the kubeconfig
     hostname=""
     port=""
