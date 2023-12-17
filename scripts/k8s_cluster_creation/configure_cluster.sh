@@ -285,7 +285,7 @@ if [ -n "$haproxy_to_add" ]; then
         echo -e "${RED}[ERROR] The cluster configurations, have not haproxy enabled. Please make sure that haprocy is enabled.${NC}"
         exit 1
     fi
-    # Pritn message
+    # Print message
     echo -e "${GREEN}[INFORMATION] New haproxies added, procedure executed successfully! ${NC}"
     exit 1 # Exit from script because you need only to add a new haproxy
 fi
@@ -633,7 +633,7 @@ while IFS= read -r node; do
             NEW_MASTER_NODES="true"
         fi
 
-        # Run the ansible playbook and capture the exit status
+        # Run the ansible playbook to configure the node
         start_playbook_nodes "$PWD_DIR/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD_DIR/ansible/k8s_cluster_creation/playbooks/k8s_cluster_creation.yml" "@$PWD_DIR/$path_vars_ansible_file" "ansible_become_pass=$ssh_user_password"
     else
         if [ "$KUBECONFIG_FIRST_TIME" == "false" ]; then
@@ -648,7 +648,7 @@ while IFS= read -r node; do
                 exit 1
             fi
 
-            # Run the ansible playbook and capture the exit status
+            # Run the ansible playbook to configure the node
             start_playbook_nodes "$PWD_DIR/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD_DIR/ansible/k8s_cluster_creation/playbooks/k8s_cluster_creation.yml" "@$PWD_DIR/$path_vars_ansible_file" "ansible_become_pass=$ssh_user_password"
             
             # We need to set a variable to true, because we need to update the kubeconfig
@@ -663,40 +663,21 @@ while IFS= read -r node; do
             # can join to the cluster using the updated 
             # .kubeconfig and api address, using the vip (virtual ip) or dns of the haproxy
             if [ "$HAPROXY_FIRST_TIME" == "false" ]; then
-                # Configure HAProxy & .kubeconfig and then
-                # start the ploybook to configure the second node 
-
                 ##############################################################
                 #                 CHECK IF MANAGE HAPROXY                    #
                 ##############################################################
 
                 # Configure haproxy if enabled
                 if [ "$haproxy_enabled" == "true" ]; then
-                    start_palybook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR"
+                    start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR"
                 fi
-
-                #######################################################
-                # CHANGE IP/DNS FROM KUBECONFIG IF IT IS SET HAPROXY  #
-                #######################################################
-
-                # Check if add the dns or ip to the kubeconfig
-                hostname=""
-                port=""
-                if [ "$DNS_OR_IP" == "dns" ]; then
-                    hostname="$haproxy_dns"
-                    port="443"
-                else
-                    hostname="$vip"
-                    port="6443"
-                fi
-
-                # Change the value of 'haproxy.ssl.kubeconfig_setup' to false on the json
 
                 # Update the variable for the others nodes
                 HAPROXY_FIRST_TIME="true"
             else
                 # Start playbook to configure the others nodes
-                # using the vip (virtual ip) or dns of the haproxy 
+                # using the vip (virtual ip) or dns of the haproxy (if set),
+                # otherwise use master node ip address.
                 start_playbook_nodes "$PWD_DIR/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD_DIR/ansible/k8s_cluster_creation/playbooks/k8s_cluster_creation.yml" "@$PWD_DIR/$path_vars_ansible_file" "ansible_become_pass=$ssh_user_password"
             fi
         fi
@@ -777,9 +758,9 @@ wait
 echo -e "${GREEN}[INFORMATION] K8s cluster configured successfully, all nodes have been initialized :)${NC}"
 
 
-##################################################
-# UPDATE HAPROXY IF A NEW MASTER NODE IS ADDED   #
-##################################################
+###################################################
+# UPDATE HAPROXY IF A NEW MASTER NODES IS ADDED   #
+###################################################
 
 # Update haproxy if it has been added new master nodes
 if [ "$haproxy_enabled" == "true" ] && [ "$NEW_NODE_OR_INIT" == "NEW_NODES" ]; then
