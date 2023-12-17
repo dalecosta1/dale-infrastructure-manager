@@ -4,7 +4,7 @@
 set -e
 
 # //////////////////////////////////////////////////////////
-#                     HAProxy Updates                      /
+#                     HAProxy Update                       /
 # //////////////////////////////////////////////////////////
 
 # EXAMPLE OF INPUT STRING ARGUMENT
@@ -58,7 +58,7 @@ sudo cp "$HAPROXY_CFG_PATH" "${HAPROXY_CFG_PATH}.backup"
 TEMP_CFG_FILE=$(mktemp)
 
 # Copy the existing configuration up to the end of the master nodes list
-sed '/# === END MASTER NODES ===/q' $HAPROXY_CFG_PATH > $TEMP_CFG_FILE
+sudo sed '/# === END MASTER NODES ===/q' $HAPROXY_CFG_PATH > $TEMP_CFG_FILE
 
 # Append new nodes configuration
 while read -r node; do
@@ -68,7 +68,7 @@ while read -r node; do
 done <<< "$master_nodes"
 
 # Append the rest of the original configuration file
-sed -n '/# === END MASTER NODES ===/,$p' $HAPROXY_CFG_PATH >> $TEMP_CFG_FILE
+sudo sed -n '/# === END MASTER NODES ===/,$p' $HAPROXY_CFG_PATH >> $TEMP_CFG_FILE
 
 # Move the updated configuration back to the original file
 sudo mv $TEMP_CFG_FILE $HAPROXY_CFG_PATH

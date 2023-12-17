@@ -144,11 +144,11 @@ Compile the for 'Cluster creation' to generate the manifests.
 
 Before to start, understand that ansible work with underscore, so all files inside the folders 'ansible' and 'scripts' are with underscore. Use this nomenclature please. Once you got the manifests, put the YAML inside inside a new folder under ansible/k8s_cluster_creation/inventory/group_vars. The folder it is preferible that it is called as the name of the cluster eg: cluster_dev --> So put YAML into ansible/k8s_cluster_creation/inventory/group_vars/cluster_dev.
 
-Make sure 'start_ansible.sh' is executable (done by the script setup.sh):
+Make sure 'configure_cluster.sh' is executable (done by the script setup.sh):
 
 ```bash
   cd dale-infrastructure-manager
-  sudo chmod +x scripts/k8s_cluster_creation/start_ansible.sh
+  sudo chmod +x scripts/k8s_cluster_creation/configure_cluster.sh
 ```
 
 After this, put the json file inside the folder scripts/k8s_cluster_creation/json.
@@ -159,18 +159,18 @@ Now, go on root folder of the git project:
 ```bash
   sudo -s
   cd dale-infrastructure-manager
-  # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
-  ./scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
+  # Start the bash script... eg: ./scripts/k8s_cluster_creation/configure_cluster.sh cluster_dev.json
+  ./scripts/k8s_cluster_creation/configure_cluster.sh <json_file_name>
 ```
 
 - Ubuntu:
 ```bash
   cd dale-infrastructure-manager
-  # Start the bash script... eg: . scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
-  . scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
+  # Start the bash script... eg: . scripts/k8s_cluster_creation/configure_cluster.sh cluster_dev.json
+  . scripts/k8s_cluster_creation/configure_cluster.sh <json_file_name>
 ```
 
-Start the script 'start_ansible.sh' passing by arg. the name of the file json with the nodes configurations to create the cluster. The script will start the execution of the procedure. 
+Start the script 'configure_cluster.sh' passing by arg. the name of the file json with the nodes configurations to create the cluster. The script will start the execution of the procedure. 
 
 At the end the procedure if doing 'kubectl get nodes' you get error:
 
@@ -182,7 +182,7 @@ At the end the procedure if doing 'kubectl get nodes' you get error:
 ```
 
 You need to do the export PATH manually. To do it,
-is necessary copy and past the command suggested by the script 'start_ansible.sh' at the end of the script:
+is necessary copy and past the command suggested by the script 'configure_cluster.sh' at the end of the script:
 
 ```bash
 #[INFORMATION] If 'kubectl get nodes' does not return the number of nodes on the cluster, maybe you need to run 'export KUBECONFIG' manually. Open the terminal and copy-past this: 'export KUBECONFIG="/Users/user1/.kube/config/cluster-dev/kubeconfig"'
@@ -244,15 +244,15 @@ Now is possible run again the script:
 ```bash
   sudo -s
   cd dale-infrastructure-manager
-  # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
-  ./scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
+  # Start the bash script... eg: ./scripts/k8s_cluster_creation/configure_cluster.sh cluster_dev.json
+  ./scripts/k8s_cluster_creation/configure_cluster.sh <json_file_name>
 ```
 
 - Ubuntu:
 ```bash
   cd dale-infrastructure-manager
-  # Start the bash script... eg: ./scripts/k8s_cluster_creation/start_ansible.sh cluster_dev.json
-  . scripts/k8s_cluster_creation/start_ansible.sh <json_file_name>
+  # Start the bash script... eg: ./scripts/k8s_cluster_creation/configure_cluster.sh cluster_dev.json
+  . scripts/k8s_cluster_creation/configure_cluster.sh <json_file_name>
 ```
 
 ## 📜 Template YAML

@@ -4,7 +4,7 @@
   become: true
   # Used only if the user wants put manually 
   # the value before the execution of the playbook.
-  # In this case we pass the value from extra-var arg on start_ansible.sh
+  # In this case we pass the value from extra-var arg on configure_cluster.sh
   # vars_prompt:
   #   - name: nodes_to_join_on_master 
   #     prompt: "Enter a value for my_var"

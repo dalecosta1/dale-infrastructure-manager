@@ -1,5 +1,5 @@
 ---
-- name: K8s haproxy updates
+- name: Execute bash script on remote host
   hosts: "{{ target_hosts }}"
   become: true
 

@@ -194,7 +194,7 @@ if [ "$ssl_enabled" = "true" ]; then
     # Create a cron job (hook) to renew the certificate
     echo "[INFORMATION] Creating a cron job (hook) to renew the ssl certificates automatically..."
     haproxy_filename="haproxy-reload.sh"
-    cat "sudo systemctl reload haproxy" > "$haproxy_filename"
+    sudo cat "sudo systemctl reload haproxy" > "$haproxy_filename"
     sudo chmod +x "$haproxy_filename"
     sudo mv "$haproxy_filename" /etc/letsencrypt/renewal-hooks/deploy/
 

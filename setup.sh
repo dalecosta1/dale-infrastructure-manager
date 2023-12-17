@@ -250,10 +250,16 @@ fi
 #############################
 
 # Print message
-echo "[INFORMATION] Making the script start_ansible.sh executable..."
+echo "[INFORMATION] Making the script configure_cluster.sh executable..."
 
 # Chmod on scripts
-sudo chmod +x "$PWD/scripts/k8s_cluster_creation/start_ansible.sh"
+sudo chmod +x "$PWD/scripts/k8s_cluster_creation/configure_cluster.sh"
+
+# Print message
+echo "[INFORMATION] Making the script add_new_haproxy.sh executable..."
+
+# Chmod on scripts
+sudo chmod +x "$PWD/scripts/k8s_cluster_creation/add_new_haproxy.sh"
 
 # Print message
 echo "[INFORMATION] Initializing UI with 'npm i'..."
