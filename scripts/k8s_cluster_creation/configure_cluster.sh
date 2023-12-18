@@ -644,26 +644,26 @@ while IFS= read -r node; do
     #   the master control-plane it is the virtual ip address of the haproxy.
 
     # Checking the context...
-    if [ "$NEW_NODE_OR_INIT" == "NEW_NODES" ]; then
+    if [[ "$NEW_NODE_OR_INIT" == "NEW_NODES" ]]; then
         # New node to add to the cluster
         echo "[INFORMATION] New node to add to the cluster: $hostname"
 
         # Check if the are master nodes to add
-        if [ "$node_type" == "master" ]; then
+        if [[ "$node_type" == "master" ]]; then
             NEW_MASTER_NODES="true"
         fi
 
         # Run the ansible playbook to configure the node
         start_playbook_nodes "$PWD_DIR/ansible/k8s_cluster_creation/inventory/hosts.yml" "$PWD_DIR/ansible/k8s_cluster_creation/playbooks/k8s_cluster_creation.yml" "@$PWD_DIR/$path_vars_ansible_file" "ansible_become_pass=$ssh_user_password"
     else
-        if [ "$KUBECONFIG_FIRST_TIME" == "false" ]; then
+        if [[ "$KUBECONFIG_FIRST_TIME" == "false" ]]; then
             # First configuration of the cluster
             echo "[INFORMATION] First configuration of the cluster, start to configure the node: $hostname"
             
             # Check that the first node is a master
             # node and 'master_type' is set to 'master'
             # otherwise print an error...
-            if [ "$node_type" != "master" ] && [ "$master_type_node" = "master" ]; then
+            if [[ "$node_type" != "master" ]] && [[ "$master_type_node" = "master" ]]; then
                 echo -e "${RED}[ERROR] The first node of the cluster must be a master node!${NC}"
                 exit 1
             fi
@@ -682,13 +682,13 @@ while IFS= read -r node; do
             # set a variabile to true. So the next cicle of the loop, all nodes
             # can join to the cluster using the updated 
             # .kubeconfig and api address, using the vip (virtual ip) or dns of the haproxy
-            if [ "$HAPROXY_FIRST_TIME" == "false" ]; then
+            if [[ "$HAPROXY_FIRST_TIME" == "false" ]]; then
                 ##############################################################
                 #                 CHECK IF MANAGE HAPROXY                    #
                 ##############################################################
 
                 # Configure haproxy if enabled
-                if [ "$haproxy_enabled" == "true" ]; then
+                if [[ "$haproxy_enabled" == "true" ]]; then
                     start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR" "$NODES_JSON_PATH"
                 fi
 
@@ -735,7 +735,7 @@ fi
 echo "[INFORMATION] Label nodes (only to execute playbook on master node)"
 
 # Check if master_node is empty and set it to "NO_MASTER" if it is
-if [ ${#master_node[@]} -eq 0 ]; then
+if [[ ${#master_node[@]} -eq 0 ]]; then
     master_node+=("NO_MASTER")
 fi
 
@@ -764,7 +764,7 @@ ansible-playbook -i "$PWD_DIR/ansible/k8s_cluster_creation/inventory/hosts.yml" 
 playbook_label_exit_status=$?
 
 # Check the exit status and take actions accordingly
-if [ $playbook_label_exit_status -eq 0 ]; then
+if [[ $playbook_label_exit_status -eq 0 ]]; then
     echo -e "${GREEN}[INFORMATION] Playbook Label Operation completed${NC}"
 else
     echo -e "${RED}[ERROR] Playbook label Operation failed${NC}"
@@ -783,7 +783,7 @@ echo -e "${GREEN}[INFORMATION] K8s cluster configured successfully, all nodes ha
 ###################################################
 
 # Update haproxy if it has been added new master nodes
-if [ "$haproxy_enabled" == "true" ] && [ "$NEW_NODE_OR_INIT" == "NEW_NODES" ]; then
+if [[ "$haproxy_enabled" == "true" ]] && [[ "$NEW_NODE_OR_INIT" == "NEW_NODES" ]]; then
     # Start the playbook to 
     # update the haproxy running the function
     start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR" "$NODES_JSON_PATH"
@@ -806,13 +806,13 @@ if [ "$KUBECONFIG_SETUP" == "true" ]; then
     echo "n" | uplink access import --force main export.txt
 
     # Check if the .kube folder exists or not
-    if [ ! -d "$HOME/.kube" ]; then
+    if [[ ! -d "$HOME/.kube" ]]; then
         # Create the .kube folder
         mkdir -p "$HOME/.kube"
     fi
 
     # Check if the .kube/config folder exists or not
-    if [ ! -d "$HOME/.kube/config" ]; then
+    if [[ ! -d "$HOME/.kube/config" ]]; then
         # Create the .kube/config folder
         mkdir -p "$HOME/.kube/config"
     fi
@@ -830,7 +830,7 @@ if [ "$KUBECONFIG_SETUP" == "true" ]; then
     # Check if KUBECONFIG is already
     # set and if it contains a non-empty value.
     echo "[INFORMATION] OS KUBECONFIG VARIABLE: $KUBECONFIG"
-    if [ -n "$KUBECONFIG" ]; then
+    if [[ -n "$KUBECONFIG" ]]; then
         # Append the new kubeconfig path to the existing KUBECONFIG
         kubeconfig_string="$KUBECONFIG:$kubeconfig_path"
     else
