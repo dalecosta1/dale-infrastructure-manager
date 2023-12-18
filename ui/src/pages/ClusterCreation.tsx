@@ -76,14 +76,6 @@ const ClusterCreation: React.FC = () => {
       return;
     }
 
-    // Call the backend function to create manifests
-    const createManifestsResult = clusterCreationBe.createManifests(formData, nodeConfigList);
-    if (!createManifestsResult.success) {
-      // Show an error notification
-      toast.error(createManifestsResult.message);
-      return;
-    }
-
     // Create the part of the HAProxy
     const haProxyConfig = clusterCreationBe.createHAProxyConfig(haProxyCommonConfig, haProxyConfigList);
 
@@ -91,6 +83,14 @@ const ClusterCreation: React.FC = () => {
     if (!haProxyConfig.success) {
       // Show an error notification
       toast.error(haProxyConfig.message);
+      return;
+    }
+
+    // Call the backend function to create manifests
+    const createManifestsResult = clusterCreationBe.createManifests(formData, nodeConfigList, haProxyConfig.result);
+    if (!createManifestsResult.success) {
+      // Show an error notification
+      toast.error(createManifestsResult.message);
       return;
     }
 
@@ -478,7 +478,7 @@ const ClusterCreation: React.FC = () => {
                 </Select>
               </FormControl>
               <FormControl fullWidth margin="normal" required>
-                <InputLabel id="open-ports-label">Master Type (only for HAProxy enabeld and master nodes)</InputLabel>
+                <InputLabel id="open-ports-label">Master Type (for multi-master nodes)</InputLabel>
                 <Select
                   labelId="open-ports-label"
                   id="open-ports"
@@ -486,7 +486,7 @@ const ClusterCreation: React.FC = () => {
                   onChange={handleNodeConfigSelectChange(index, 'MASTER_TYPE')}
                   required
                 >
-                  <MenuItem value="not_configured">Not Configured</MenuItem>
+                  <MenuItem value="not_configured">not configured</MenuItem>
                   <MenuItem value="master">master</MenuItem>
                   <MenuItem value="backup">backup</MenuItem>
                 </Select>
@@ -677,12 +677,12 @@ const ClusterCreation: React.FC = () => {
                 <Select
                   labelId={`ie-label-${index}`}
                   id={`ie-${index}`}
-                  value={config.internal_or_external}
+                  value="external" // Set the default value to "external"
                   onChange={handleHaProxySelectConfigChange(index, 'internal_or_external')}
                   required
                 >
                   <MenuItem value="external">External</MenuItem>
-                  <MenuItem value="internal">Internal</MenuItem>
+                  <MenuItem value="internal" disabled>Internal</MenuItem> {/* Disable the "Internal" option */}
                 </Select>
               </FormControl>
               <br/>

@@ -82,6 +82,7 @@ start_playbook_haproxy() {
     local i_dns=$6
     local i_dns_or_ip=$7
     local i_pwd=$8
+    local i_json_path=$9
 
     # Check if HAProxy is enabled
     if [ "$i_haproxy_enabled" == "true" ]; then
@@ -204,8 +205,27 @@ start_playbook_haproxy() {
         # Check if are been added new haproxy
         # or configured only for new master nodes or first time
         if [ "$haproxy_to_add" -ge 1  ]
-            # Updates json file on tag 'ha_proxy_script' annd
-            # move 'ha_proxy_to_add' into 'ha_proxy_to_configure'
+            # Updates json file moving 'ha_proxy_to_add' into 'ha_proxy_to_configure'
+            hap_json_cluster_path_file="$i_json_path"
+            hap_json_input=$(cat "$hap_json_cluster_path_file")
+
+            # Migrate haproxy from 'haproxy_to_add' to 'haproxy_to_configure' and
+            # set 'haproxy_to_add' to an empty array.
+            hap_json_output=$(echo "$hap_json_input" | jq '.haproxy.haproxy_to_configure += .haproxy.haproxy_to_add | .haproxy.haproxy_to_add = []')
+
+            # Check status
+            hap_jq_status=$?
+
+            # Check the exit status and take actions accordingly
+            if [[ $hap_jq_status -eq 0 ]]; then
+                echo -e "${GREEN}[INFORMATION] Json updated (haproxy)!${NC}"
+            else
+                echo -e "${RED}[ERROR] An exception occurred during the updates of the json (haproxy).${NC}"
+                exit 1  # Exit the script with an error code
+            fi
+
+            # Save the updated JSON to a file
+            echo "$hap_json_output" > "$hap_json_cluster_path_file"
         fi
 
         # print message
@@ -280,7 +300,7 @@ if [ -n "$haproxy_to_add" ]; then
     echo "[INFORMATION] Start to execute the procedure to add new haproxies..." 
     # Configure haproxy if enabled
     if [ "$haproxy_enabled" == "true" ]; then
-        start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR"
+        start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR" "$NODES_JSON_PATH"
     else
         echo -e "${RED}[ERROR] The cluster configurations, have not haproxy enabled. Please make sure that haprocy is enabled.${NC}"
         exit 1
@@ -539,9 +559,9 @@ if [ -n "$nodes_to_add" ]; then
 
     # Check the exit status and take actions accordingly
     if [[ $jq_status -eq 0 ]]; then
-        echo -e "${GREEN}[INFORMATION] Json updated!${NC}"
+        echo -e "${GREEN}[INFORMATION] Json updated (new nodes)!${NC}"
     else
-        echo -e "${RED}[ERROR] An exception occurred during the updates of the json.${NC}"
+        echo -e "${RED}[ERROR] An exception occurred during the updates of the json (new nodes).${NC}"
         exit 1  # Exit the script with an error code
     fi
 
@@ -669,7 +689,7 @@ while IFS= read -r node; do
 
                 # Configure haproxy if enabled
                 if [ "$haproxy_enabled" == "true" ]; then
-                    start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR"
+                    start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR" "$NODES_JSON_PATH"
                 fi
 
                 # Update the variable for the others nodes
@@ -766,7 +786,7 @@ echo -e "${GREEN}[INFORMATION] K8s cluster configured successfully, all nodes ha
 if [ "$haproxy_enabled" == "true" ] && [ "$NEW_NODE_OR_INIT" == "NEW_NODES" ]; then
     # Start the playbook to 
     # update the haproxy running the function
-    start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR"
+    start_playbook_haproxy "$haproxy_enabled" "$nodes_to_add_backup" "$json_data" "$vip" "$ssl_enabled" "$dns" "$DNS_OR_IP" "$PWD_DIR" "$NODES_JSON_PATH"
 else 
     echo "[INFORMATION] HAProxy script is not enabled or the operation is not for new nodes (type of worker). Skipping updates haproxy..."
 fi

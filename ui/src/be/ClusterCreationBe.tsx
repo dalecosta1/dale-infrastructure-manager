@@ -28,7 +28,7 @@ class ClusterCreationBe {
         }            
     }
 
-    createManifests(formData: FormDataModel, nodeConfigList: NodeConfigItemModel[]) {
+    createManifests(formData: FormDataModel, nodeConfigList: NodeConfigItemModel[], haProxy: HAProxyConfig) {
         try {
             // Create a zip archive
             let arrYaml: ReturnYamlModel[] = [];
@@ -83,6 +83,15 @@ pod_cidr: "${formData.POD_CIDR}"
 ##########################
 env: "${formData.ENV}"
 local_path_git: "${formData.PROJECT_GIT_PATH}"
+
+##########################
+# haproxy                #
+##########################
+haproxy_enabled: "${haProxy.enabled}"
+haproxy_port: "${haProxy.ssl.port}"
+haproxy_dns_or_ip: "${haProxy.ssl.dns_or_ip}"
+haproxy_ip: "${haProxy.haproxy_common_cfg.vip}"
+haproxy_dns: "${haProxy.ssl.dns}"
                 `;
 
                 // Specify the path where you want to save the YAML file
@@ -107,7 +116,9 @@ local_path_git: "${formData.PROJECT_GIT_PATH}"
             enabled: '',
             ssl: {
                 enabled: '',
-                dns: ''
+                dns: '',
+                dns_or_ip: '',
+                port: '',
             },
             haproxy_common_cfg: {
                 password: '',
@@ -176,11 +187,15 @@ local_path_git: "${formData.PROJECT_GIT_PATH}"
                 } else {
                     // Set dns
                     haproxy.ssl.dns = haproxyCommon.domain;
+                    haproxy.ssl.dns_or_ip = 'dns';
+                    haproxy.ssl.port = '443';
                 }
             } else {
                 // Ssl is not enabled
                 haproxy.ssl.enabled = 'false';
                 haproxy.ssl.dns = '';
+                haproxy.ssl.dns_or_ip = 'ip';
+                haproxy.ssl.port = '6443';
             }
 
             // Return a response

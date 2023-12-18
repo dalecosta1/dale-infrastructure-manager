@@ -3,6 +3,8 @@
 export interface SslConfig {
     enabled: string;
     dns: string;
+    dns_or_ip: string;
+    port: string;
 }
 
 export interface HAProxyCommonConfig {
@@ -85,7 +87,9 @@ class ClusterConfigModel implements ClusterConfig {
         enabled: '',
         ssl: {
             enabled: '',
-            dns: ''
+            dns: '',
+            dns_or_ip: '',
+            port: ''
         },
         haproxy_common_cfg: {
             password: '',

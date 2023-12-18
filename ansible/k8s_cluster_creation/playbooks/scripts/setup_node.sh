@@ -108,6 +108,11 @@ CLUSTER_NAME="" # Name of the cluster you are going to create
 HOME_DIRECTORY="" # Path of $HOME to download and save temporary files
 NODE_MASTER_TYPE="" # The node is master or backup master
 CONTROL_PLAN_ENDPOINT="" # The endpoint of the control plan (haproxy dns or ip)
+HAPROXY_ENABLED="" # If enabled haproxy
+HAPROXY_PORT="" # Port of haproxy
+HAPROXY_DNS_OR_IP="" # If haproxy is configured with dns or ip
+HAPROXY_IP="" # Ip of haproxy
+HAPROXY_DNS="" # Dns of haproxy
 
 # Variables not set from args
 kubeadm_output="" # Variable used to get the output of kubeadm command to store info about master node
@@ -143,18 +148,39 @@ if [[ "$HAPROXY_ENABLED" == "true" ]]; then
     fi
 fi
 
+
+#################################################################
+# If enabled haproxy with dns, add to etc/hosts the ip with dns #
+#################################################################
+
+# Check if HAProxy is enabled
+FINAL_MSG="Skippping the process of adding HAProxy IP and DNS to /etc/hosts..."
+if [ "$HAPROXY_ENABLED" == "true" ]; then
+    # Check if HAProxy DNS is provided
+    if [ -n "$HAPROXY_DNS" ]; then
+        # Add HAProxy IP and DNS to /etc/hosts
+        echo "$HAPROXY_IP $HAPROXY_DNS" | sudo tee -a /etc/hosts
+        echo "[INFORMATION] HAProxy DNS configured!"
+    else
+        echo "[INFORMATION] HAProxy DNS not configured, $FINAL_MSG"
+    fi
+else
+    echo "[INFORMATION] HAProxy is not enabled, $FINAL_MSG"
+fi
+
+
 ############################################
 # Setup node (master or worker)            #
 ############################################
 
+# If the node is master node configure it otherwise configure 
+# it as worker node or backup control plane.
 if [[ "$NODE_TYPE" == "master" ]]; then
-
     # Before to configure the masternode,
     # we need to understand if the node is the master node (master)
     # or is configured as a backup master node...
     # If the node is a backup master node,
     # we need to configure different from the real master node.
-
     if [[ "$NODE_MASTER_TYPE" == "master" ]]; then
         ##################################################
         # Setup for control plane (master node - master) #
@@ -252,9 +278,9 @@ if [[ "$NODE_TYPE" == "master" ]]; then
         uplink cp --parallelism 10 output_kubeadm.json "sj://$BUCKET_NAME/$CLUSTER_NAME/output_kubeadm.json"
         uplink cp --parallelism 10 "$HOME_DIRECTORY"/.kube/config "sj://$BUCKET_NAME/$CLUSTER_NAME/admin.conf"
     else
-        ##################################################
-        # Setup for control plane (master node - backup) #
-        ##################################################
+        ######################################################
+        # Setup for bck control plane (master node - backup) #
+        ######################################################
         setup_worker_node_or_bck_control_plane "$BUCKET_SECRET" "$BUCKET_NAME" "$CLUSTER_NAME" "$HOME_DIRECTORY" "master_bck"
     fi
 else

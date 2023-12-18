@@ -254,7 +254,7 @@
 
     # Setup node of the cluster (worker or master)
     - name: Cluster node setup
-      shell: "bash -c '. {{ ansible_env.PWD }}/setup_node.sh \"{{ node_type }}\" \"{{ node_name }}\" \"{{ cluster_name }}\" \"{{ storj_bucket }}\" \"{{ storj_secret }}\" \"{{ node_ip }}\" \"{{ pod_cidr }}\" \"{{ ansible_env.PWD }}\"'"
+      shell: "bash -c '. {{ ansible_env.PWD }}/setup_node.sh \"{{ node_type }}\" \"{{ node_name }}\" \"{{ cluster_name }}\" \"{{ storj_bucket }}\" \"{{ storj_secret }}\" \"{{ node_ip }}\" \"{{ pod_cidr }}\" \"{{ ansible_env.PWD }}\" \"{{ master_type }}\" \"{{ haproxy_enabled }}\" \"{{ haproxy_port }}\" \"{{ haproxy_dns_or_ip }}\" \"{{ haproxy_ip }}\" \"{{ haproxy_dns }}\"'"
       become: true
       environment:
         ansible_shell_executable: /bin/bash
